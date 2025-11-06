@@ -1,0 +1,310 @@
+diff -cr -x config.log -x config.status -x config.cache -x *.Po -I zlib-1.1.4-orig* zlib-1.1.4-orig/Makefile zlib-1.1.4/Makefile
+*** zlib-1.1.4-orig/Makefile	Mon Mar 11 14:58:30 2002
+--- zlib-1.1.4/Makefile	Mon Mar 11 22:19:24 2002
+***************
+*** 14,39 ****
+  
+  CC=cc
+  
+! CFLAGS=-O
+  #CFLAGS=-O -DMAX_WBITS=14 -DMAX_MEM_LEVEL=7
+  #CFLAGS=-g -DDEBUG
+  #CFLAGS=-O3 -Wall -Wwrite-strings -Wpointer-arith -Wconversion \
+  #           -Wstrict-prototypes -Wmissing-prototypes
+  
+! LDFLAGS=-L. -lz
+  LDSHARED=$(CC)
+  CPP=$(CC) -E
+  
+  VER=1.1.4
+! LIBS=libz.a
+! SHAREDLIB=libz.so
+  
+  AR=ar rc
+  RANLIB=ranlib
+  TAR=tar
+  SHELL=/bin/sh
+  
+! prefix = /usr/local
+  exec_prefix = ${prefix}
+  libdir = ${exec_prefix}/lib
+  includedir = ${prefix}/include
+--- 14,48 ----
+  
+  CC=cc
+  
+! CFLAGS= -O2 -fnative-struct -fno-rtti -fno-exceptions -mcpu=pentium -march=i386
+! #CFLAGS=-O
+  #CFLAGS=-O -DMAX_WBITS=14 -DMAX_MEM_LEVEL=7
+  #CFLAGS=-g -DDEBUG
+  #CFLAGS=-O3 -Wall -Wwrite-strings -Wpointer-arith -Wconversion \
+  #           -Wstrict-prototypes -Wmissing-prototypes
+  
+! LDFLAGS=-s -L. -lz
+! #LDFLAGS=-L. -lz
+  LDSHARED=$(CC)
+  CPP=$(CC) -E
+  
+  VER=1.1.4
+! #LIBS=libz.a	-liberty -lc
+! LIBS=$(SHAREDLIB) -liberty -lc
+! SHAREDLIB=libz.dll.a
+! #SHAREDLIB=libz.so
+  
+  AR=ar rc
+  RANLIB=ranlib
+  TAR=tar
+  SHELL=/bin/sh
+  
+! # Rule to make compiled resource (Windows)
+! %-rc.o: %.rc
+! 	windres -i $< -o $@
+! 
+! prefix = c:/progra~1/Zlib
+! #prefix = /usr/local
+  exec_prefix = ${prefix}
+  libdir = ${exec_prefix}/lib
+  includedir = ${prefix}/include
+***************
+*** 80,96 ****
+  	mv _match.o match.o
+  	rm -f _match.s
+  
+! $(SHAREDLIB).$(VER): $(OBJS)
+! 	$(LDSHARED) -o $@ $(OBJS)
+! 	rm -f $(SHAREDLIB) $(SHAREDLIB).1
+! 	ln -s $@ $(SHAREDLIB)
+! 	ln -s $@ $(SHAREDLIB).1
+  
+! example: example.o $(LIBS)
+! 	$(CC) $(CFLAGS) -o $@ example.o $(LDFLAGS)
+  
+! minigzip: minigzip.o $(LIBS)
+! 	$(CC) $(CFLAGS) -o $@ minigzip.o $(LDFLAGS)
+  
+  install: $(LIBS)
+  	-@if [ ! -d $(includedir)  ]; then mkdir $(includedir); fi
+--- 89,109 ----
+  	mv _match.o match.o
+  	rm -f _match.s
+  
+! #$(SHAREDLIB).$(VER): $(OBJS)
+! $(SHAREDLIB): $(OBJS)
+! #	$(LDSHARED) -o $@ $(OBJS)
+! 	o2dll $@ -n zlib.dll $(OBJS)
+! #	rm -f $(SHAREDLIB) $(SHAREDLIB).1
+! #	mv -f $@ $(SHAREDLIB)
+! #	cp -fp $@ $(SHAREDLIB).1
+! #	ln -s $@ $(SHAREDLIB)
+! #	ln -s $@ $(SHAREDLIB).1
+  
+! example: example.o example-rc.o $(LIBS)
+! 	$(CC) $(CFLAGS) -o $@ example.o  example-rc.o $(LDFLAGS)
+  
+! minigzip: minigzip.o minigzip-rc.o $(LIBS)
+! 	$(CC) $(CFLAGS) -o $@ minigzip.o  minigzip-rc.o $(LDFLAGS)
+  
+  install: $(LIBS)
+  	-@if [ ! -d $(includedir)  ]; then mkdir $(includedir); fi
+***************
+*** 102,111 ****
+  	-@(cd $(libdir); $(RANLIB) libz.a || true) >/dev/null 2>&1
+  	cd $(libdir); if test -f $(SHAREDLIB).$(VER); then \
+  	  rm -f $(SHAREDLIB) $(SHAREDLIB).1; \
+! 	  ln -s $(SHAREDLIB).$(VER) $(SHAREDLIB); \
+! 	  ln -s $(SHAREDLIB).$(VER) $(SHAREDLIB).1; \
+  	  (ldconfig || true)  >/dev/null 2>&1; \
+  	fi
+  # The ranlib in install is needed on NeXTSTEP which checks file times
+  # ldconfig is for Linux
+  
+--- 115,126 ----
+  	-@(cd $(libdir); $(RANLIB) libz.a || true) >/dev/null 2>&1
+  	cd $(libdir); if test -f $(SHAREDLIB).$(VER); then \
+  	  rm -f $(SHAREDLIB) $(SHAREDLIB).1; \
+! 	  cp -fp $(SHAREDLIB).$(VER) $(SHAREDLIB); \
+! 	  cp -fp $(SHAREDLIB).$(VER) $(SHAREDLIB).1; \
+  	  (ldconfig || true)  >/dev/null 2>&1; \
+  	fi
++ #	  ln -s $(SHAREDLIB).$(VER) $(SHAREDLIB); 
++ #	  ln -s $(SHAREDLIB).$(VER) $(SHAREDLIB).1; 
+  # The ranlib in install is needed on NeXTSTEP which checks file times
+  # ldconfig is for Linux
+  
+***************
+*** 139,151 ****
+  	rm -f test.c ztest*.c contrib/minizip/test.zip
+  	d=zlib-`sed -n '/VERSION "/s/.*"\(.*\)".*/\1/p' < zlib.h`;\
+  	rm -f $$d.tar.gz; \
+! 	if test ! -d ../$$d; then rm -f ../$$d; ln -s `pwd` ../$$d; fi; \
+  	files=""; \
+  	for f in $(DISTFILES); do files="$$files $$d/$$f"; done; \
+  	cd ..; \
+  	GZIP=-9 $(TAR) chofz $$d/$$d.tar.gz $$files; \
+  	if test ! -d $$d; then rm -f $$d; fi
+  	mv Makefile~ Makefile
+  
+  tags:	
+  	etags *.[ch]
+--- 154,167 ----
+  	rm -f test.c ztest*.c contrib/minizip/test.zip
+  	d=zlib-`sed -n '/VERSION "/s/.*"\(.*\)".*/\1/p' < zlib.h`;\
+  	rm -f $$d.tar.gz; \
+! 	if test ! -d ../$$d; then rm -f ../$$d; cp -fp `pwd` ../$$d; fi; \
+  	files=""; \
+  	for f in $(DISTFILES); do files="$$files $$d/$$f"; done; \
+  	cd ..; \
+  	GZIP=-9 $(TAR) chofz $$d/$$d.tar.gz $$files; \
+  	if test ! -d $$d; then rm -f $$d; fi
+  	mv Makefile~ Makefile
++ #	if test ! -d ../$$d; then rm -f ../$$d; ln -s `pwd` ../$$d; fi; 
+  
+  tags:	
+  	etags *.[ch]
+diff -cr -x config.log -x config.status -x config.cache -x *.Po -I zlib-1.1.4-orig* zlib-1.1.4-orig/contrib/minizip/Makefile zlib-1.1.4/contrib/minizip/Makefile
+*** zlib-1.1.4-orig/contrib/minizip/Makefile	Tue Mar 17 18:55:16 1998
+--- zlib-1.1.4/contrib/minizip/Makefile	Mon Mar 11 22:21:22 2002
+***************
+*** 1,19 ****
+  CC=cc
+! CFLAGS=-O -I../..
+  
+! UNZ_OBJS = miniunz.o unzip.o ../../libz.a
+! ZIP_OBJS = minizip.o zip.o   ../../libz.a
+  
+  .c.o:
+  	$(CC) -c $(CFLAGS) $*.c
+  
+  all: miniunz minizip
+  
+  miniunz:  $(UNZ_OBJS)
+! 	$(CC) $(CFLAGS) -o $@ $(UNZ_OBJS)
+  
+  minizip:  $(ZIP_OBJS)
+! 	$(CC) $(CFLAGS) -o $@ $(ZIP_OBJS)
+  
+  test:	miniunz minizip
+  	./minizip test readme.txt
+--- 1,23 ----
+  CC=cc
+! CFLAGS=-O2 -fnative-struct -fno-rtti -fno-exceptions -mcpu=pentium -march=i386 -I../..
+  
+! UNZ_OBJS = miniunz.o miniunz-rc.o unzip.o -L../.. -lz 
+! ZIP_OBJS = minizip.o minizip-rc.o zip.o   -L../.. -lz 
+  
+  .c.o:
+  	$(CC) -c $(CFLAGS) $*.c
+  
++ # Rule to make compiled resource (Windows)
++ %-rc.o: %.rc
++ 	windres -i $< -o $@
++ 
+  all: miniunz minizip
+  
+  miniunz:  $(UNZ_OBJS)
+! 	$(CC) -s $(CFLAGS) -o $@ $(UNZ_OBJS)
+  
+  minizip:  $(ZIP_OBJS)
+! 	$(CC) -s $(CFLAGS) -o $@ $(ZIP_OBJS)
+  
+  test:	miniunz minizip
+  	./minizip test readme.txt
+diff -cr -x config.log -x config.status -x config.cache -x *.Po -I zlib-1.1.4-orig* zlib-1.1.4-orig/contrib/minizip/miniunz.c zlib-1.1.4/contrib/minizip/miniunz.c
+*** zlib-1.1.4-orig/contrib/minizip/miniunz.c	Thu Mar 19 00:15:00 1998
+--- zlib-1.1.4/contrib/minizip/miniunz.c	Mon Mar 11 22:04:38 2002
+***************
+*** 12,17 ****
+--- 12,20 ----
+  # include <direct.h>
+  # include <io.h>
+  #endif
++ #ifdef __WIN32__
++ #include <windows.h>
++ #endif
+  
+  #include "unzip.h"
+  
+***************
+*** 79,85 ****
+  {
+      int ret=0;
+  #ifdef WIN32
+! 	ret = mkdir(dirname);
+  #else
+  #ifdef unix
+  	ret = mkdir (dirname,0775);
+--- 82,88 ----
+  {
+      int ret=0;
+  #ifdef WIN32
+! 	ret = _mkdir(dirname);
+  #else
+  #ifdef unix
+  	ret = mkdir (dirname,0775);
+diff -cr -x config.log -x config.status -x config.cache -x *.Po -I zlib-1.1.4-orig* zlib-1.1.4-orig/contrib/minizip/minizip.c zlib-1.1.4/contrib/minizip/minizip.c
+*** zlib-1.1.4-orig/contrib/minizip/minizip.c	Thu Mar 19 15:45:48 1998
+--- zlib-1.1.4/contrib/minizip/minizip.c	Mon Mar 11 22:05:16 2002
+***************
+*** 14,19 ****
+--- 14,22 ----
+  # include <direct.h>
+  # include <io.h>
+  #endif
++ #ifdef __WIN32__
++ #include <windows.h>
++ #endif
+  
+  #include "zip.h"
+  
+diff -cr -x config.log -x config.status -x config.cache -x *.Po -I zlib-1.1.4-orig* zlib-1.1.4-orig/contrib/minizip/zip.c zlib-1.1.4/contrib/minizip/zip.c
+*** zlib-1.1.4-orig/contrib/minizip/zip.c	Fri Jun 19 17:55:24 1998
+--- zlib-1.1.4/contrib/minizip/zip.c	Mon Mar 11 22:07:08 2002
+***************
+*** 10,15 ****
+--- 10,16 ----
+  #include <string.h>
+  #include "zlib.h"
+  #include "zip.h"
++ #include "zutil.h"
+  
+  #ifdef STDC
+  #  include <stddef.h>
+diff -cr -x config.log -x config.status -x config.cache -x *.Po -I zlib-1.1.4-orig* zlib-1.1.4-orig/contrib/untgz/Makefile zlib-1.1.4/contrib/untgz/Makefile
+*** zlib-1.1.4-orig/contrib/untgz/Makefile	Tue Jan 20 16:30:58 1998
+--- zlib-1.1.4/contrib/untgz/Makefile	Mon Mar 11 22:22:30 2002
+***************
+*** 1,8 ****
+  CC=cc
+! CFLAGS=-g
+  
+! untgz: untgz.o  ../../libz.a
+! 	$(CC) $(CFLAGS) -o untgz  untgz.o -L../.. -lz
+  
+  untgz.o: untgz.c ../../zlib.h
+  	$(CC) $(CFLAGS) -c -I../.. untgz.c
+--- 1,12 ----
+  CC=cc
+! CFLAGS=-O2 -fnative-struct -fno-rtti -fno-exceptions -mcpu=pentium -march=i386
+  
+! # Rule to make compiled resource (Windows)
+! %-rc.o: %.rc
+! 	windres -i $< -o $@
+! 
+! untgz: untgz.o untgz-rc.o ../../libz.a
+! 	$(CC) $(CFLAGS) -s -o untgz  untgz.o untgz-rc.o -L../.. -lz
+  
+  untgz.o: untgz.c ../../zlib.h
+  	$(CC) $(CFLAGS) -c -I../.. untgz.c
+diff -cr -x config.log -x config.status -x config.cache -x *.Po -I zlib-1.1.4-orig* zlib-1.1.4-orig/contrib/untgz/untgz.c zlib-1.1.4/contrib/untgz/untgz.c
+*** zlib-1.1.4-orig/contrib/untgz/untgz.c	Thu Jul  9 18:46:02 1998
+--- zlib-1.1.4/contrib/untgz/untgz.c	Mon Mar 11 21:53:18 2002
+***************
+*** 32,37 ****
+--- 32,38 ----
+  #  else
+  #    define mkdir(dirname,mode) _mkdir(dirname)
+  #  endif
++ #include <windows.h>
+  #else
+  #  include <utime.h>
+  #endif
