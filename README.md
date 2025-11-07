@@ -2,7 +2,7 @@
 
 Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rendering and Xbox 360-specific optimizations. Core emulation code remains intact; improvements are limited to the Xbox UI layer (XUI scenes, Direct3D rendering, XAudio2 audio, input handling).
 
-> **Note:** Based on the original Xbox 360 port (Snes360 V0.32 Beta, credited to "Anonymous" in source code). **ModernVintageGamer (Dimitris)** is known to have contributed to the original port, which was a collaborative effort with multiple developers. This enhanced version **removes all achievement functionality** to prevent Xbox Live bans, along with build fixes, C89 compatibility improvements, and **Many more features and improvements are planned for future releases.**
+> **Note:** Based on the original Xbox 360 port (Snes360 V0.32 Beta, credited to "Anonymous" in source code). **ModernVintageGamer (Dimitris)** worked extensively on the original port and **provided the source code** that made this enhanced version possible. We are **very thankful** for his contributions and for sharing the source code. The original port was a collaborative effort with multiple developers. This enhanced version **removes all achievement functionality** to prevent Xbox Live bans, along with build fixes, C89 compatibility improvements, and **Many more features and improvements are planned for future releases.**
 
 **Current Version: V0.33 Beta**
 
@@ -13,7 +13,7 @@ Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rend
 * **Target:** Xbox 360 (RGH/JTAG/Dev Kits), retail-runnable `.xex`
 
 * **Original Port:** Anonymous (Snes360 V0.32 Beta, 07-16-2010) - Original Xbox 360 port of Snes9x
-* **Known Contributors:** ModernVintageGamer (Dimitris) and others (see Credits section)
+* **Source Code Provider:** ModernVintageGamer (Dimitris) - Provided the source code and worked extensively on the original port (see Credits section)
 
 ---
 
@@ -385,9 +385,11 @@ The Xbox 360 build uses a standalone CRC32 implementation to avoid linking again
   - XAudio2 audio integration
   - Xbox 360 controller support
   - XUI integration
-- **ModernVintageGamer (Dimitris)** - Known contributor to the Xbox 360 port
-  - Worked on the original Xbox 360 port alongside other developers
-  - Note: The original port was a collaborative effort with multiple contributors
+- **ModernVintageGamer (Dimitris)** - Original Xbox 360 port contributor and source code provider
+  - Worked extensively on the original Xbox 360 port alongside other developers
+  - **Provided the source code** that made this enhanced version possible
+  - We are **very thankful** for his contributions and for sharing the source code
+  - The original port was a collaborative effort with multiple contributors
 
 ### Original Port Contributors & Credits
 The original Xbox 360 port credits acknowledge the following contributors:
