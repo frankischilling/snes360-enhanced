@@ -4,6 +4,8 @@ Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rend
 
 > **Note:** Based on the original Xbox 360 port (Snes360 V0.32 Beta, credited to "Anonymous" in source code). **ModernVintageGamer (Dimitris)** is known to have contributed to the original port, which was a collaborative effort with multiple developers. This enhanced version **removes all achievement functionality** to prevent Xbox Live bans, along with build fixes, C89 compatibility improvements, and **Many more features and improvements are planned for future releases.**
 
+**Current Version: V0.33 Beta**
+
 * **Toolchain:** Visual Studio 2008 SP1
 
 * **SDK:** Xbox 360 XDK 2.0.9328.0
@@ -21,6 +23,7 @@ Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rend
 - [What's New](#whats-new)
 - [Repository Layout](#repository-layout)
 - [Build](#build)
+- [Building the XZP Package (Customizing the XUI Skin)](#building-the-xzp-package-customizing-the-xui-skin)
 - [Deploy to Xbox 360](#deploy-to-xbox-360-rghjtagdev-kits)
 - [Controls](#controls)
 - [Technical Notes](#technical-notes)
@@ -46,6 +49,30 @@ XUI-based user interface with custom skin resources and Xbox 360 dashboard integ
 ---
 
 ## What's New
+
+### V0.33 Beta - New Features
+
+* **Favorites System:** Complete favorites management system for organizing your ROM collection
+  * **Favorites List Page:** Dedicated favorites page accessible from the main menu
+    * Shows all your favorite games in one convenient list
+    * Quick access to your most-played games
+    * Sorted alphabetically for easy browsing
+  * **Add/Remove Favorites:** Easy favorite management
+    * Press **LB (Left Bumper)** while browsing ROMs to toggle favorite status
+    * Or use the "Add to Favorites" button in the ROM list
+    * Favorites are saved automatically
+  * **Favorite Tags in ROM List:** Visual indicators for favorites
+    * Favorite games show a **[Favorite]** tag prefix in the main ROM list
+    * Helps identify favorites at a glance
+    * ROM list sorts alphabetically (favorites mixed in, not separated)
+  * **Persistent Storage:** Favorites are saved to `settings.xml` and persist across sessions
+
+* **Enhanced XZP Build Script:** Improved `Build_XZP.bat` script for creating XZP packages
+  * **Smart File Filtering:** Automatically excludes graphics files (PNG, JPG, etc.) when duplicating
+    * Only duplicates XUR, XUI, XML, TTF, XMA, and other non-graphics files
+    * Prevents unnecessary duplication of large image files
+    * Reduces XZP file size while maintaining functionality
+  * **Streamlined Process:** Easier XZP package creation for custom skins
 
 ### ⚠️ CRITICAL: Achievement System Completely Removed
 
@@ -125,6 +152,11 @@ snes360-enhanced/
    - Includes the Xbox 360 compiler toolchain (VCCLX360CompilerTool)
    - Required for building Xbox 360 executables
 
+3. **Dependencies (Included in Repository)**
+   - **zlib** - Compression library (included in `zLib/` directory)
+   - **libPNG** - PNG image support library (included in `libPNG/` directory)
+   - Both libraries are included in the repository and do not need to be downloaded separately
+
 ### Build Steps
 
 1. **Open the Project**
@@ -162,6 +194,77 @@ The Xbox 360 build uses the following key preprocessor definitions:
 * Post-build may warn about Xbox 360 connection - this is expected if Neighborhood isn't configured. The `.xex` still builds successfully.
 
 * Typical era/toolchain warnings are harmless (e.g., `/GR-` RTTI notes, `FASTCALL` macro noise).
+
+---
+
+## Building the XZP Package (Customizing the XUI Skin)
+
+The XZP (XUI Package) file contains all the skin resources (XUR files, images, fonts, etc.) used by the Xbox 360 UI. To customize the skin or add new XUR files, you'll need to rebuild the `Snes360.xzp` package.
+
+### Prerequisites
+
+- **XZP Tool 2.0** - Tool for extracting and examining XZP archives
+- A working `Snes360.xzp` file from a current build
+- The `Build_XZP.bat` script (included in the repository root)
+
+### Steps to Customize and Rebuild the XZP
+
+1. **Extract the Current XZP**
+   - Use **XZP Tool 2.0** to extract a current working build of `Snes360.xzp`
+   - This will give you the base structure and all existing skin files
+
+2. **Set Up the Folder Structure**
+   - Create the following directory structure:
+     ```
+     C:\Users\imike\Desktop\snes360-enhanced\Xbox\Xbox\Skin\
+     ```
+   - Copy all extracted files from the XZP into this `Xbox\Xbox\Skin\` folder
+   - Maintain the same directory structure (including the `Graphics\` subfolder if present)
+
+3. **Add Your Custom XUR Files**
+   - Place your new or modified XUR files in `Xbox\Xbox\Skin\`
+   - **Important:** Also copy your new XUR files to the source directory:
+     ```
+     snes9x-1.51-src-d3d\xbox\Skin\
+     ```
+   - This ensures the files are available in both locations for the build process
+
+4. **Run the Build Script**
+   - Open a command prompt in the repository root directory
+   - Run `Build_XZP.bat`
+   - The script will:
+     - Create a new `Snes360.xzp` file in the repository root
+     - Include files from both `snes9x-1.51-src-d3d\xbox\Skin\` and `Xbox\Xbox\Skin\`
+     - Preserve the relative path structure (`..\Xbox\Skin\`) inside the XZP
+     - Maintain duplicate files with different table offsets (matching original structure)
+
+5. **Deploy to Xbox 360**
+   - Copy the newly created `Snes360.xzp` to your Xbox 360
+   - Replace the existing `Snes360.xzp` in your `media` folder on the Xbox
+   - The exact location depends on your setup, typically:
+     ```
+     Hdd1:\Emulators\Snes360\media\Snes360.xzp
+     ```
+     or wherever your `media` folder is located
+
+### Build Script Details
+
+The `Build_XZP.bat` script:
+- Runs from the `snes9x-1.51-src-d3d\win32\` directory (matching the original build process)
+- First adds files from `..\xbox\Skin\*` (source directory) - includes all files (graphics and non-graphics)
+- Then appends files from `..\..\Xbox\Xbox\Skin\*` (your custom directory) using the `/a` (append) flag
+  - **Smart Filtering:** Automatically filters out graphics files (PNG, JPG, JPEG, GIF, BMP) when duplicating
+  - Only duplicates non-graphics files: XUR, XUI, XML, TTF, XMA, WAV, 3XUI
+  - Prevents unnecessary duplication of large image files
+  - Reduces final XZP file size
+- Creates duplicates with different table offsets to match the original XZP structure
+- Outputs `Snes360.xzp` in the repository root directory
+
+### Notes
+
+- The script preserves the relative path structure `..\Xbox\Skin\` inside the XZP archive
+- Duplicate files (like `filemanager.xur`) with different sizes and table offsets are intentionally maintained to match the original build structure
+- Always test your custom XZP on the Xbox 360 before deploying to ensure fonts and resources load correctly
 
 ---
 
@@ -209,6 +312,9 @@ The compiled `.xex` executable can run on any Xbox 360 console that supports uns
 * **A:** Load selected game & start emulation
 * **B:** Back / Return to previous screen
 * **Next Device Button:** Switch between storage devices (USB, HDD, etc.)
+* **Favorites Button:** Access the favorites list page (main menu)
+* **LB (Left Bumper):** Toggle favorite status for selected ROM (while browsing ROM list)
+* **Add to Favorites Button:** Add/remove selected ROM from favorites
 
 ### In-Game
 * **D-pad / Left Stick:** SNES D-pad
@@ -223,6 +329,14 @@ The compiled `.xex` executable can run on any Xbox 360 console that supports uns
 ---
 
 ## Technical Notes
+
+### Dependencies
+
+**zlib and libPNG are included in the repository:**
+- **zlib** - Located in `zLib/` directory, used for compression/decompression
+- **libPNG** - Located in `libPNG/` directory, used for PNG screenshot support
+- Both libraries are compiled as part of the build process
+- No additional downloads or installation required
 
 ### CRC32 Implementation
 
@@ -288,6 +402,11 @@ The original Xbox 360 port credits acknowledge the following contributors:
   - Documentation improvements
   - Default settings.xml creation
   - UI improvements
+  - **V0.33 Beta Features:**
+    - Favorites system implementation
+    - Favorites list page
+    - Favorite tags in ROM list
+    - Enhanced XZP build script with smart file filtering
 
 ### Core Emulator
 - **Snes9x Team** - Original Snes9x emulator
@@ -320,6 +439,7 @@ This software is for educational and homebrew development purposes. Use of this 
 ---
 
 **Last Updated:** 2025
+**Current Version:** V0.33 Beta  
 **Build System:** Visual Studio 2008 SP1 + Xbox 360 XDK 9328  
 **Target Platform:** Xbox 360 (.xex compatible consoles - RGH, JTAG, Dev Kits, etc.)  
 **Original Port:** ModernVintageGamer (Dimitris)
