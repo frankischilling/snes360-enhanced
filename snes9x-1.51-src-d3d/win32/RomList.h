@@ -96,6 +96,7 @@ protected:
     XUI_BEGIN_MSG_MAP()
 		XUI_ON_XM_INIT( OnInit )
 		XUI_ON_XM_NOTIFY_PRESS( OnNotifyPress )
+		XUI_ON_XM_RENDER( OnRender )
     XUI_END_MSG_MAP()
 
 	
@@ -105,7 +106,11 @@ protected:
 public:
     HRESULT OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
 	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
+	HRESULT OnRender( XUIMessageRender* pRenderData, BOOL& bHandled );
 	VOID   SetEffectValue( INT nValue );
+	
+private:
+	bool m_bLBWasPressed;
  
 public:
 

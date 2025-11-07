@@ -6,6 +6,7 @@
 #include "tinyxml\tinyxml.h"
 #include <string>
 #include <map>
+#include <set>
 
 #define DEFINE_XML_PROP(name) \
 	public:\
@@ -29,7 +30,15 @@ public:
 	map<string,string>::iterator GetDeviceMapBegin();
 	map<string,string>::iterator GetDeviceMapEnd();
 	map<string,string>::iterator FindDevice(std::string Device);
-	void CreateFavoritesDoc(void);
+	
+	// Favorites management (uses text file, not XML)
+	bool AddFavorite(const string & sRomName);
+	bool RemoveFavorite(const string & sRomName);
+	bool IsFavorite(const string & sRomName) const;
+	set<string> GetFavorites() const;
+	bool LoadFavorites();
+	bool SaveFavorites();
+	bool Save(const string & sXmlPath);
 
 	DEFINE_XML_PROP(XboxGamePath)
 	DEFINE_XML_PROP(Xbox360GamePath)
@@ -39,6 +48,8 @@ private:
 	TiXmlDocument m_XmlDoc;
 	bool m_bLoaded;
 	map<string, string> m_DeviceMap;
+	set<string> m_Favorites;
+	string m_sXmlPath;
 public:
 	string m_PreviewPath;
 };

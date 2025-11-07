@@ -13,6 +13,7 @@
 #include <xmp.h>
 #include "Main.h"
 #include "RomList.h"
+#include "FavoritesList.h"
 #include "InGameOptions.h"
 #include "Storage.h"
 #include "RomSettings.h"
@@ -344,9 +345,10 @@ class CSnes360Menu : public CXuiSceneImpl
 
 public:
 	CXuiControl m_SignInLabel;
+	CXuiTextElement m_VersionText;
 protected:
     CXuiControl m_RomList;
-    CXuiControl m_button2;
+	CXuiNavButton m_button2;  // Favorites button
 	CXuiControl m_button3;
 	CXuiControl m_button4;
 	CXuiControl m_button5;
@@ -390,11 +392,33 @@ public:
     HRESULT OnNotifyPress( HXUIOBJ hObjPressed, 
        BOOL& bHandled )
     {
+        // Check if favorites button is being pressed
+        if (hObjPressed == m_button2.m_hObj || hObjPressed == m_button2)
+        {
+			OutputDebugStringW(L"Favorites button pressed - loading scene\n");
+			// Favorites button - load FavoritesListScene.xur
+			HXUIOBJ hFavoritesScene;
+			HRESULT hr = XuiSceneCreate( L"file://game:/media/Snes360.xzp#..\\Xbox\\Skin\\", L"FavoritesListScene.xur", NULL, &hFavoritesScene );
+			if (SUCCEEDED(hr))
+			{
+				OutputDebugStringW(L"FavoritesListScene.xur loaded successfully, navigating...\n");
+				this->NavigateForward(hFavoritesScene);
+			}
+			else
+			{
+				// Debug: Show error if scene creation fails
+				WCHAR errorMsg[256];
+				swprintf_s(errorMsg, L"Failed to load FavoritesListScene.xur: 0x%08X\n", hr);
+				OutputDebugStringW(errorMsg);
+			}
+			bHandled = TRUE;
+			return S_OK;
+		}
         
 		if( hObjPressed == m_button4 )
 		{
 			const WCHAR * button_text = L"OK";
-			ShowMessageBoxEx(NULL,NULL,L"About", L"Snes360 V0.32 Beta\n\nby Anonymous\n07-16-2010 11:59pm\n\nGreets to r0wdy, Arak0n, kl0wn, idc, direw0lf, PeteNub, MomDad, Odb718, Angerwound, Redline99, TJ_CRS, Xenon7, Xantium, _skitzo_\n\nDonations not required!\n\nFUCK Hawk, Jester\n\n", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
+			ShowMessageBoxEx(NULL,NULL,L"About", L"Snes360 V0.33 Beta\n\nOriginal by Anonymous\n07-16-2010 11:59pm\n\nEnhanced by frankischilling\n2025\n\nGreets to r0wdy, Arak0n, kl0wn, idc, direw0lf, PeteNub, MomDad, Odb718, Angerwound, Redline99, TJ_CRS, Xenon7, Xantium, _skitzo_\n\nDonations not required!\n\nFUCK Hawk, Jester\n\n", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
 			//DoAchievo(ACHIEVEMENT_FREEXEX_DISS);  // Achievements disabled
 			
 
@@ -414,12 +438,6 @@ public:
 				XMPContinue(NULL);
 			}
 	
-		}
-		else if( hObjPressed == m_button2 )
-		{
-			const WCHAR * button_text = L"OK";
-			ShowMessageBoxEx(NULL,NULL,L"Favorites", L"Not Implemented Yet!", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
-
 		}
 		else if (hObjPressed == m_button5 )
 		{
@@ -532,8 +550,20 @@ public:
 		 
         // Retrieve controls for later use.
         GetChildById( L"XuiRoms", &m_RomList );
-        GetChildById( L"XuiFavorites", &m_button2 );
+        
+        // Enable and show the favorites button
+        if (SUCCEEDED(GetChildById( L"XuiFavorites", &m_button2 )))
+        {
+            m_button2.SetShow(true);  // Explicitly show the favorites button
+            m_button2.SetOpacity(1.0f);  // Ensure full opacity
+            OutputDebugStringW(L"Favorites button found and enabled\n");
+        }
+        else
+        {
+            OutputDebugStringW(L"WARNING: Favorites button (XuiFavorites) not found!\n");
+        }
         GetChildById( L"XuiOptions", &m_button3 );
+		
 		m_button3.SetText(L"N/A");  // Rename achievements button to N/A (achievements disabled)
 		GetChildById( L"XuiAbout", &m_button4 );
 		GetChildById( L"XuiQuit", &m_button5 );
@@ -542,8 +572,11 @@ public:
 	 
 		GetChildById( L"XuiLabelSignInInfo", &m_SignInLabel );
 		GetChildById( L"XuiMusicToggle", &m_MusicToggle );
+		GetChildById( L"XuiText1", &m_VersionText );
 		//GetChildById( L"XuiLogo", &m_Logo );
 		 
+		// Set version text dynamically
+		m_VersionText.SetText(L"Version 0.33 Beta");
 	 
 		UpdatePresence(CONTEXT_GAMESTATE_IDLE);
  
@@ -585,11 +618,13 @@ HRESULT RenderGame( IDirect3DDevice9 *pDevice )
 HRESULT CSnes360App::RegisterXuiClasses()
 {
     // We must register the video control classes
-    XuiVideoRegister();
+	XuiVideoRegister();
 	XuiSoundXAudioRegister();
 	CSnes360Menu::Register();
 	CRomListScene::Register();
 	CRomList::Register();
+	CFavoritesListScene::Register();
+	CFavoritesList::Register();
 	CInGameOptions::Register();
 	CEffectScene::Register();
 
@@ -647,6 +682,8 @@ HRESULT CSnes360App::UnregisterXuiClasses()
     CSnes360Menu::Unregister();
 	CRomListScene::Unregister();
 	CRomList::Unregister();
+	CFavoritesListScene::Unregister();
+	CFavoritesList::Unregister();
 	CInGameOptions::Unregister();
 	CEffectScene::Unregister();
     return S_OK;

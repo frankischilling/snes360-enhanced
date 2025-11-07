@@ -3,6 +3,7 @@
 #include "Storage.h"
 #include "Main.h"
 #include "RomSettings.h"
+#include <set>
 //#include "Snes 360.spa.h"  // Achievements disabled
 #include "XboxContext.h"  // Minimal context/property definitions (achievements excluded)
  
@@ -22,6 +23,8 @@ wchar_t DeviceText[60];
 std::vector<std::string> m_ListData;
 map<string,string>::iterator romPath;
 std::string ReplaceCharInString(const std::string & source, char charToReplace, const std::string replaceString);
+bool g_bShowFavoritesOnly = false;  // Flag to show only favorites
+
 
 void SaveConfig(void)
 {
@@ -48,6 +51,7 @@ void SaveConfig(void)
 
 void InRescanRomsFirstFunc(XUIMessage *pMsg, InRescanRomsStruct* pData, char *szPath)
 {
+    pData->szPath = szPath;
     XuiMessage(pMsg,XM_MESSAGE_ON_RESCAN_ROMS);
     _XuiMessageExtra(pMsg,(XUIMessageData*) pData, sizeof(*pData));
 
@@ -84,7 +88,7 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 			XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
 
 			romPath++;
- 
+
 			if (romPath == romPaths.GetDeviceMapEnd())
 			{
 				romPath = romPaths.GetDeviceMapBegin();
@@ -106,9 +110,36 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 			return S_OK;
 
 		}
+		else if (hObjPressed == m_AddToFavorites)
+		{
+			nIndex = m_RomList.GetCurSel();
+			if (nIndex >= 0 && nIndex < (int)m_ListData.size())
+			{
+				string romName = m_ListData[nIndex];
+				
+				// Toggle favorite status
+				if (romPaths.IsFavorite(romName))
+				{
+					romPaths.RemoveFavorite(romName);
+					const WCHAR * button_text = L"OK";
+					ShowMessageBoxEx(NULL, NULL, L"Favorites", L"Removed from favorites", 1, (LPCWSTR*)&button_text, NULL, XUI_MB_CENTER_ON_PARENT, NULL);
+				}
+				else
+				{
+					romPaths.AddFavorite(romName);
+					const WCHAR * button_text = L"OK";
+					ShowMessageBoxEx(NULL, NULL, L"Favorites", L"Added to favorites", 1, (LPCWSTR*)&button_text, NULL, XUI_MB_CENTER_ON_PARENT, NULL);
+				}
+			}
+			
+			bHandled = TRUE;
+			return S_OK;
+		}
 
 		if( XuiControlIsBackButton( hObjPressed ) )
 		{
+			// Reset favorites flag when going back
+			g_bShowFavoritesOnly = false;
 			this->NavigateBack();
 
 		}
@@ -119,6 +150,46 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
         return S_OK;
     }
 
+
+HRESULT CRomListScene::OnRender( XUIMessageRender* pRenderData, BOOL& bHandled )
+{
+	// Check for LB button press to toggle favorite
+	XINPUT_STATE state;
+	if (XInputGetState(0, &state) == ERROR_SUCCESS)
+	{
+		bool lbPressed = (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) != 0;
+		
+		// Detect button press (wasn't pressed before, is pressed now)
+		if (lbPressed && !m_bLBWasPressed)
+		{
+			// Get currently selected ROM
+			int nIndex = m_RomList.GetCurSel();
+			if (nIndex >= 0 && nIndex < (int)m_ListData.size())
+			{
+				string romName = m_ListData[nIndex];
+				
+				// Toggle favorite status
+				if (romPaths.IsFavorite(romName))
+				{
+					romPaths.RemoveFavorite(romName);
+					const WCHAR * button_text = L"OK";
+					ShowMessageBoxEx(NULL, NULL, L"Favorites", L"Removed from favorites", 1, (LPCWSTR*)&button_text, NULL, XUI_MB_CENTER_ON_PARENT, NULL);
+				}
+				else
+				{
+					romPaths.AddFavorite(romName);
+					const WCHAR * button_text = L"OK";
+					ShowMessageBoxEx(NULL, NULL, L"Favorites", L"Added to favorites", 1, (LPCWSTR*)&button_text, NULL, XUI_MB_CENTER_ON_PARENT, NULL);
+				}
+			}
+		}
+		
+		m_bLBWasPressed = lbPressed;
+	}
+	
+	bHandled = FALSE;  // Let other handlers process render too
+	return S_OK;
+}
 
 VOID   CRomListScene::SetEffectValue( INT nValue )
 {
@@ -137,7 +208,6 @@ VOID   CRomListScene::SetEffectValue( INT nValue )
     //----------------------------------------------------------------------------------
 HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
     {
- 
         // Retrieve controls for later use.
         GetChildById( L"XuiAddToFavorite", &m_AddToFavorites );
         GetChildById( L"XuiPlay", &m_PlayRom );
@@ -156,8 +226,19 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_RomList.SetFocus();
 		m_RomList.SetCurSel(0);
  
-		swprintf_s(DeviceText, L"Current Device : %S", szRomPath);
+		// Update device text - show "Favorites" if in favorites mode, otherwise show current device
+		if (g_bShowFavoritesOnly)
+		{
+			swprintf_s(DeviceText, L"Favorites");
+		}
+		else
+		{
+			swprintf_s(DeviceText, L"Current Device : %S", szRomPath);
+		}
 		m_DeviceText.SetText(DeviceText);
+		
+		// Initialize LB button state tracking
+		m_bLBWasPressed = false;
 
 		bHandled = TRUE;
 
@@ -240,29 +321,121 @@ HRESULT CRomList::OnRescanRoms( char *szPath,  BOOL& bHandled )
 { 
 	
 	DeleteItems(0, m_ListData.size());
-	strcpy((char *)szRoms, romPath->second.c_str());
-	strcat(szRoms, "*.*");
- 
 	m_ListData.clear();
 
-	HANDLE hFind;	
-	WIN32_FIND_DATAA oFindData;
-
-	hFind = FindFirstFile(szRoms, &oFindData);
-
-	if (hFind != INVALID_HANDLE_VALUE)
+	if (g_bShowFavoritesOnly)
 	{
-		do
-		{		
-			
-			m_ListData.push_back(_strlwr(oFindData.cFileName));
-			 
+		// Load favorites mode - get favorites from settings
+		romPaths.LoadFavorites();
+		set<string> favorites = romPaths.GetFavorites();
+		
+		if (!favorites.empty())
+		{
+			// Search through all device paths to find the ROM files
+			for (map<string, string>::iterator pathIt = romPaths.GetDeviceMapBegin(); 
+				 pathIt != romPaths.GetDeviceMapEnd(); 
+				 ++pathIt)
+			{
+				string devicePath = pathIt->second;
+				
+				// First, get all files in this directory to match case-insensitively
+				string searchPath = devicePath + "*.*";
+				HANDLE hFind;
+				WIN32_FIND_DATAA oFindData;
+				
+				hFind = FindFirstFile(searchPath.c_str(), &oFindData);
+				if (hFind != INVALID_HANDLE_VALUE)
+				{
+					do
+					{
+						// Skip directories
+						if (!(oFindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+						{
+							// Get found filename in lowercase for comparison
+							char foundLower[MAX_PATH];
+							strcpy(foundLower, oFindData.cFileName);
+							_strlwr(foundLower);
+							string foundFileNameLower(foundLower);
+							
+							// Check if this file matches any favorite (case-insensitive)
+							for (set<string>::iterator favIt = favorites.begin(); 
+								 favIt != favorites.end(); 
+								 ++favIt)
+							{
+								string favoriteName = *favIt;
+								// Convert favorite name to lowercase for comparison
+								char favLower[MAX_PATH];
+								strcpy(favLower, favoriteName.c_str());
+								_strlwr(favLower);
+								string favLowerStr(favLower);
+								
+								// Match case-insensitively
+								if (foundFileNameLower == favLowerStr)
+								{
+									// Check if we haven't already added this ROM
+									bool alreadyAdded = false;
+									for (size_t i = 0; i < m_ListData.size(); i++)
+									{
+										// Case-insensitive comparison
+										char existingLower[MAX_PATH];
+										strcpy(existingLower, m_ListData[i].c_str());
+										_strlwr(existingLower);
+										string existingLowerStr(existingLower);
+										
+										if (existingLowerStr == favLowerStr)
+										{
+											alreadyAdded = true;
+											break;
+										}
+									}
+									
+									if (!alreadyAdded)
+									{
+										// Use the original favorite name (as stored)
+										m_ListData.push_back(favoriteName);
+									}
+									break;  // Found match, move to next favorite
+								}
+							}
+						}
+					} while (FindNextFile(hFind, &oFindData));
+					
+					FindClose(hFind);
+				}
+			}
+		}
+		
+		// Reset flag after loading
+		g_bShowFavoritesOnly = false;
+	}
+	else
+	{
+		// Normal mode - load all ROMs from current path
+		strcpy((char *)szRoms, romPath->second.c_str());
+		strcat(szRoms, "*.*");
+	 
+		HANDLE hFind;	
+		WIN32_FIND_DATAA oFindData;
 
-		} while (FindNextFile(hFind, &oFindData));
+		hFind = FindFirstFile(szRoms, &oFindData);
 
-	
+		if (hFind != INVALID_HANDLE_VALUE)
+		{
+			do
+			{		
+				// Skip directories and special entries
+				if (!(oFindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+				{
+					m_ListData.push_back(_strlwr(oFindData.cFileName));
+				}
+
+			} while (FindNextFile(hFind, &oFindData));
+
+			FindClose(hFind);
+		}
 	}
 
+	// Sort alphabetically (favorites will still show [Favorite] tag but won't be sorted first)
 	std::sort(m_ListData.begin(), m_ListData.end());
 	 
 	InsertItems( 0, m_ListData.size() );
@@ -273,10 +446,22 @@ HRESULT CRomList::OnRescanRoms( char *szPath,  BOOL& bHandled )
 
 HRESULT CRomList::OnInit(XUIMessageInit *pInitData, BOOL& bHandled)
 {
+	// If in favorites mode, use empty path (we'll search all paths in OnRescanRoms)
+	// Otherwise use the current device path and ensure flag is false
+	char *pathToUse = (char *)romPath->second.c_str();
+	if (g_bShowFavoritesOnly)
+	{
+		pathToUse = (char *)"";  // Empty path - OnRescanRoms will handle favorites mode
+	}
+	else
+	{
+		// Explicitly ensure flag is false for normal mode (in case scene is reused)
+		g_bShowFavoritesOnly = false;
+	}
  
 	XUIMessage xuiMsg;
 	InRescanRomsStruct msgData;
-	InRescanRomsFirstFunc( &xuiMsg, &msgData, (char *)romPath->second.c_str() );
+	InRescanRomsFirstFunc( &xuiMsg, &msgData, pathToUse );
 	XuiSendMessage( m_hObj, &xuiMsg );
 
 	bHandled = TRUE;
@@ -298,17 +483,24 @@ HRESULT CRomList::OnGetSourceDataText(
     XUIMessageGetSourceText *pGetSourceTextData, 
     BOOL& bHandled)
 {
-	
-    
     if( ( 0 == pGetSourceTextData->iData ) && ( ( pGetSourceTextData->bItemData ) ) ) {
-
-			LPCWSTR lpszwBuffer = MultiCharToUniChar((char *)m_ListData[pGetSourceTextData->iItem].c_str());
-
+		if (pGetSourceTextData->iItem >= 0 && pGetSourceTextData->iItem < (int)m_ListData.size())
+		{
+			string displayName = m_ListData[pGetSourceTextData->iItem];
+			
+			// Check if this ROM is a favorite and add prefix
+			romPaths.LoadFavorites();  // Reload to ensure we have latest favorites
+			if (romPaths.IsFavorite(displayName))
+			{
+				displayName = "[Favorite] " + displayName;
+			}
+			
+			LPCWSTR lpszwBuffer = MultiCharToUniChar((char *)displayName.c_str());
             pGetSourceTextData->szText = lpszwBuffer;
-
             bHandled = TRUE;
-        }
-        return S_OK;
+		}
+    }
+    return S_OK;
 
 }
 
