@@ -1,5 +1,11 @@
 # snes360-enhanced (Snes9x-360 tweaks)
 
+![ROM Browser](../img/rombrowser.jpg)
+
+![Favorites](../img/favorites.jpg)
+
+![About](../img/about.jpg)
+
 Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rendering and Xbox 360-specific optimizations. Core emulation code remains intact; improvements are limited to the Xbox UI layer (XUI scenes, Direct3D rendering, XAudio2 audio, input handling).
 
 > **Note:** Based on the original Xbox 360 port (Snes360 V0.32 Beta, credited to "Anonymous" in source code). **ModernVintageGamer (Dimitris)** worked extensively on the original port and **provided the source code** that made this enhanced version possible. We are **very thankful** for his contributions and for sharing the source code. The original port was a collaborative effort with multiple developers. This enhanced version **removes all achievement functionality** to prevent Xbox Live bans, along with build fixes, C89 compatibility improvements, and **Many more features and improvements are planned for future releases.**
