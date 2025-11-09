@@ -1,10 +1,10 @@
 # snes360-enhanced (Snes9x-360 tweaks)
 
-![ROM Browser](../img/rombrowser.jpg)
+![ROM Browser](/img/rombrowser.jpg)
 
-![Favorites](../img/favorites.jpg)
+![Favorites](/img/favorites.jpg)
 
-![About](../img/about.jpg)
+![About](/img/about.jpg)
 
 Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rendering and Xbox 360-specific optimizations. Core emulation code remains intact; improvements are limited to the Xbox UI layer (XUI scenes, Direct3D rendering, XAudio2 audio, input handling).
 
