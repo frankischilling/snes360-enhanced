@@ -377,7 +377,7 @@
 			/>
 			<Tool
 				Name="VCX360LinkerTool"
-				AdditionalOptions=" &quot;..\tinyxml\release\tinyxml.lib&quot; "
+				AdditionalOptions=" &quot;..\tinyxml\Release_LTCG\TinyXML.lib&quot; "
 				AdditionalDependencies="d3d9.lib xgraphics.lib xapilib.lib xaudio2.lib x3daudio.lib xmcore.lib xboxkrnl.lib xbdm.lib xact3.lib xuirun.lib xuirender.lib xmedia2.lib xuivideo.lib xnet.lib xuihtml.lib xonline.lib xmp.lib"
 				OutputFile="snes9x.exe"
 				LinkIncremental="1"
@@ -4368,6 +4368,14 @@
 			</File>
 			<File
 				RelativePath=".\RomSettings.h"
+				>
+			</File>
+			<File
+				RelativePath=".\FavoritesList.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\FavoritesList.h"
 				>
 			</File>
 			<File
