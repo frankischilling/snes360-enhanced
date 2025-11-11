@@ -33,6 +33,7 @@ Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rend
 - [Deploy to Xbox 360](#deploy-to-xbox-360-rghjtagdev-kits)
 - [Controls](#controls)
 - [Technical Notes](#technical-notes)
+  - [XUI Scene Files](#xui-scene-files)
 - [Troubleshooting](#troubleshooting)
 - [Credits](#credits)
 
@@ -370,6 +371,35 @@ The Xbox 360 build uses a standalone CRC32 implementation to avoid linking again
 - Provides both `emu_crc32()` and `calc_crc32()` functions
 - Also provides `crc32()` wrapper matching zlib's signature for unzip code compatibility
 - Includes zlib.h for type definitions (`uLong`, `Bytef`, `uInt`) but uses standalone implementation
+
+### XUI Scene Files
+
+The Xbox 360 UI is built using XUI (Xbox User Interface) scene files. The main XUI files are located in `xbox/Skin/` and define the user interface screens:
+
+- **`RomList.xui`** - Main ROM browser/list interface
+  - Displays the list of available ROM files
+  - Allows browsing and selecting games to play
+  - Includes device switching, favorites management, and ROM preview functionality
+  - Entry point for launching games
+
+- **`FavoritesListScene.xui`** - Favorites list interface
+  - Dedicated page showing all favorite games
+  - Accessible from the main menu via the Favorites button
+  - Provides quick access to frequently played games
+  - Allows launching games directly from favorites list
+
+- **`InGameOptions.xui`** - In-game pause menu/options interface
+  - Accessible during gameplay by pressing both thumbsticks
+  - Provides access to:
+    - Save/Load state functionality
+    - Video filters (Simple 2x, Scanlines, TV Mode, Super Eagle, etc.)
+    - Display options (Aspect Ratio, Point Filtering, FPS Display)
+    - Audio options (Mute Audio)
+    - Screen adjustment controls
+    - Preview capture
+    - Exit game option
+
+These XUI files are packaged into the `Snes360.xzp` archive along with associated resources (images, fonts, sounds) and loaded at runtime. Customizing these files allows you to modify the appearance and behavior of the Xbox 360 UI.
 
 ---
 
