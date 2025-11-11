@@ -75,6 +75,7 @@ protected:
 	CXuiCheckbox m_AspectRatio;
 	CXuiCheckbox m_PointFiltering;
 	CXuiCheckbox m_MuteAudio;
+	CXuiCheckbox m_FPSDisplay;
 
 	CXuiRadioGroup m_FilterGroup;
 

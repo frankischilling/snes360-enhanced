@@ -343,7 +343,7 @@ void CDirect3D::render(SSurface Src)
 		changeDrawSurfaceSize(iNewFilterScale);
 	}
  
- 
+
 	if(FAILED(hr = drawSurface->LockRect(0, &lr, NULL, D3DLOCK_NOOVERWRITE))) {
 		DXTRACE_ERR_MSGBOX( TEXT("Unable to lock texture"), hr);
 		return;
@@ -356,6 +356,13 @@ void CDirect3D::render(SSurface Src)
 		
 		RenderMethod (Src, Dst, &dstRect);
  
+		// Display FPS and other messages on the rendered surface
+		if(!Settings.AutoDisplayMessages)
+		{
+			int filterScale = GetFilterScale(GUI.Scale);
+			S9xDisplayMessages((uint16*)Dst.Surface, Dst.Pitch/2, dstRect.right - dstRect.left, dstRect.bottom - dstRect.top, filterScale);
+		}
+
 		drawSurface->UnlockRect(0);
 	}
 

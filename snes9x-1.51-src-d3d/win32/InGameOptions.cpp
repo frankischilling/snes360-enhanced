@@ -147,6 +147,22 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 			return S_OK;
 
 		}
+		else if (hObjPressed == m_FPSDisplay)
+		{
+
+			if (m_FPSDisplay.IsChecked())
+			{
+				Settings.DisplayFrameRate = true;	
+			}
+			else
+			{
+				Settings.DisplayFrameRate = false;
+			}
+
+			bHandled = TRUE;
+			return S_OK;
+
+		}
 		else if (hObjPressed == m_TakePreview)
 		{
 			
@@ -237,6 +253,7 @@ HRESULT CInGameOptions::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		GetChildById( L"XuiAspectRatio", &m_AspectRatio);
 		GetChildById( L"XuiPointFiltering", &m_PointFiltering);
 		GetChildById( L"XuiMuteAudio", &m_MuteAudio);
+		GetChildById( L"XuiFPS", &m_FPSDisplay);
 		GetChildById( L"XuiButtonTakePreview", &m_TakePreview);
 		GetChildById( L"XuiRadioGroup1", &m_FilterGroup);
 		GetChildById( L"XuiFilterEPX", &m_EPX);
@@ -265,6 +282,11 @@ HRESULT CInGameOptions::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		if (Settings.Mute)
 		{
 			m_MuteAudio.SetCheck(true);
+		}
+
+		if (Settings.DisplayFrameRate)
+		{
+			m_FPSDisplay.SetCheck(true);
 		}
 
 		switch(Settings.Filter)
