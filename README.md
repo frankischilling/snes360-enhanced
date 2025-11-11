@@ -10,7 +10,7 @@ Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rend
 
 > **Note:** Based on the original Xbox 360 port (Snes360 V0.32 Beta, credited to "Anonymous" in source code). **ModernVintageGamer (Dimitris)** worked extensively on the original port and **provided the source code** that made this enhanced version possible. We are **very thankful** for his contributions and for sharing the source code. The original port was a collaborative effort with multiple developers. This enhanced version **removes all achievement functionality** to prevent Xbox Live bans, along with build fixes, C89 compatibility improvements, and **Many more features and improvements are planned for future releases.**
 
-**Current Version: V0.33 Beta**
+**Current Version: V0.34 Beta**
 
 * **Toolchain:** Visual Studio 2008 SP1
 
@@ -55,6 +55,17 @@ XUI-based user interface with custom skin resources and Xbox 360 dashboard integ
 ---
 
 ## What's New
+
+### V0.34 Beta - New Features
+
+* **FPS Display Counter:** New frame rate display toggle in InGameOptions menu
+  * **Display FPS Toggle:** Added "Display FPS" checkbox in the in-game options menu
+    * Accessible via InGameOptions menu (press both thumbsticks during gameplay)
+    * Shows current frame rate in the top-right corner of the screen
+    * Toggle on/off to show or hide the FPS counter
+  * **Persistent Setting:** FPS display preference is saved and persists across game sessions
+  * **Direct3D Support:** FPS counter now works correctly on Xbox 360 Direct3D rendering path
+  * **Real-time Display:** Shows frame rate as "XX/YY" format (current FPS / target FPS)
 
 ### V0.33 Beta - New Features
 
@@ -327,6 +338,8 @@ The compiled `.xex` executable can run on any Xbox 360 console that supports uns
 * **A, B, X, Y:** SNES buttons
 * **LB, RB:** SNES shoulder buttons
 * **START, BACK:** SNES Start/Select
+* **Both Thumbsticks (Press):** Open InGameOptions menu
+  * Access save/load state, filters, aspect ratio, point filtering, mute audio, **FPS display**, and more
 * **LEFT_THUMB + LT:** Screenshot (if implemented)
 * **START + BACK:** OSD/Menu (if implemented)
 
@@ -410,6 +423,10 @@ The original Xbox 360 port credits acknowledge the following contributors:
   - Documentation improvements
   - Default settings.xml creation
   - UI improvements
+  - **V0.34 Beta Features:**
+    - FPS display counter toggle in InGameOptions menu
+    - Direct3D rendering path improvements for FPS display
+    - InGameOptions menu navigation enhancements
   - **V0.33 Beta Features:**
     - Favorites system implementation
     - Favorites list page
@@ -447,7 +464,7 @@ This software is for educational and homebrew development purposes. Use of this 
 ---
 
 **Last Updated:** 2025
-**Current Version:** V0.33 Beta  
+**Current Version:** V0.34 Beta  
 **Build System:** Visual Studio 2008 SP1 + Xbox 360 XDK 9328  
 **Target Platform:** Xbox 360 (.xex compatible consoles - RGH, JTAG, Dev Kits, etc.)  
 **Original Port:** ModernVintageGamer (Dimitris)
