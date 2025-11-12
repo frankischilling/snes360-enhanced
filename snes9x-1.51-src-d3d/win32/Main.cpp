@@ -708,6 +708,7 @@ HXUIOBJ phObj = NULL;
 // In Game Scene
 HXUIOBJ hScene;
 HXUIOBJ hMainScene;
+HXUIOBJ hRomListScene;
  
 
 VOID __cdecl main()
@@ -809,6 +810,16 @@ VOID __cdecl main()
 			 
 			// Update XUI
 			app.RunFrame();
+			
+			// Per-frame updates for ROM list scene (keyboard handling, etc.)
+			if (hRomListScene)
+			{
+				CRomListScene* pScene = NULL;
+				if (SUCCEEDED(XuiObjectFromHandle(hRomListScene, (VOID**)&pScene)))
+				{
+					pScene->UpdatePerFrame();
+				}
+			}
 
 			// Render XUI
 			hr = app.Render();

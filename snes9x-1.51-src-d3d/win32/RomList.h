@@ -18,7 +18,21 @@
 
 #include "snes9x.h"
 
-
+// Forward declaration for Xbox keyboard UI if not in xui.h
+#ifndef XShowKeyboardUI
+extern "C" {
+	DWORD WINAPI XShowKeyboardUI(
+		DWORD dwUserIndex,
+		DWORD dwFlags,
+		LPCWSTR pwszDefaultText,
+		LPCWSTR pwszTitleText,
+		LPCWSTR pwszDescriptionText,
+		LPWSTR pwszResultText,
+		DWORD cchResultText,
+		XOVERLAPPED* pOverlapped
+	);
+}
+#endif
 
 #ifndef ROMLIST_H
 #define ROMLIST_H
@@ -108,9 +122,24 @@ public:
 	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
 	HRESULT OnRender( XUIMessageRender* pRenderData, BOOL& bHandled );
 	VOID   SetEffectValue( INT nValue );
+	VOID   OnRomsRescanned();  // Called when ROMs are rescanned to re-apply search filter
 	
 private:
 	bool m_bLBWasPressed;
+	bool m_bYWasPressed;
+	std::wstring m_SearchFilter;
+	std::vector<std::string> m_OriginalListData;  // Store unfiltered ROM list
+	bool m_searchLatch;  // Prevents multiple keyboard opens
+	XOVERLAPPED m_keyboardOverlapped;  // Overlapped structure for keyboard
+	bool m_keyboardPending;  // True when keyboard is open and waiting
+	HANDLE m_keyboardEvent;  // Event handle for keyboard
+	WCHAR m_keyboardResult[256];  // Buffer to hold keyboard result
+	
+	HRESULT ShowSearchKeyboard();
+	HRESULT ApplySearchFilter(const std::wstring& filter);
+	
+public:
+	VOID UpdatePerFrame();  // Called from main loop for per-frame updates
  
 public:
 

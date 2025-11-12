@@ -25,6 +25,9 @@ map<string,string>::iterator romPath;
 std::string ReplaceCharInString(const std::string & source, char charToReplace, const std::string replaceString);
 bool g_bShowFavoritesOnly = false;  // Flag to show only favorites
 
+// Static instance pointer for per-frame updates
+static CRomListScene* g_RomListSceneInstance = NULL;
+
 
 void SaveConfig(void)
 {
@@ -158,8 +161,9 @@ HRESULT CRomListScene::OnRender( XUIMessageRender* pRenderData, BOOL& bHandled )
 	if (XInputGetState(0, &state) == ERROR_SUCCESS)
 	{
 		bool lbPressed = (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) != 0;
+		bool yPressed = (state.Gamepad.wButtons & XINPUT_GAMEPAD_Y) != 0;
 		
-		// Detect button press (wasn't pressed before, is pressed now)
+		// Detect LB button press (wasn't pressed before, is pressed now)
 		if (lbPressed && !m_bLBWasPressed)
 		{
 			// Get currently selected ROM
@@ -185,6 +189,7 @@ HRESULT CRomListScene::OnRender( XUIMessageRender* pRenderData, BOOL& bHandled )
 		}
 		
 		m_bLBWasPressed = lbPressed;
+		m_bYWasPressed = yPressed;
 	}
 	
 	bHandled = FALSE;  // Let other handlers process render too
@@ -221,6 +226,8 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		GetChildById( L"EffectScene", &m_EffectScene );
  
 		phObj = this->m_hObj;
+		hRomListScene = this->m_hObj;  // Store scene handle for OnRescanRoms callback
+		g_RomListSceneInstance = this;  // Expose instance for per-frame updates
 
 		m_RomList.DiscardResources(XUI_DISCARD_ALL);
 		m_RomList.SetFocus();
@@ -239,6 +246,17 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		
 		// Initialize LB button state tracking
 		m_bLBWasPressed = false;
+		// Initialize Y button state tracking
+		m_bYWasPressed = false;
+		// Clear search filter on init
+		m_SearchFilter.clear();
+		m_OriginalListData.clear();
+		// Initialize keyboard state
+		m_searchLatch = false;
+		m_keyboardPending = false;
+		m_keyboardEvent = NULL;
+		memset(&m_keyboardOverlapped, 0, sizeof(XOVERLAPPED));
+		m_keyboardResult[0] = L'\0';
 
 		bHandled = TRUE;
 
@@ -437,7 +455,19 @@ HRESULT CRomList::OnRescanRoms( char *szPath,  BOOL& bHandled )
 
 	// Sort alphabetically (favorites will still show [Favorite] tag but won't be sorted first)
 	std::sort(m_ListData.begin(), m_ListData.end());
-	 
+	
+	// If there's a scene instance, notify it that rescanning is complete
+	// so it can store the original list and re-apply any search filter
+	if (hRomListScene)
+	{
+		CRomListScene* pScene = NULL;
+		if (SUCCEEDED(XuiObjectFromHandle(hRomListScene, (VOID**)&pScene)))
+		{
+			// Store the new list as original and re-apply filter if one exists
+			pScene->OnRomsRescanned();
+		}
+	}
+	
 	InsertItems( 0, m_ListData.size() );
 
 	bHandled = TRUE;	
@@ -533,5 +563,191 @@ std::string ReplaceCharInString(
     } 
  
     return result; 
+}
+
+// Show Xbox 360 keyboard dialog for search (async, like NES emu)
+HRESULT CRomListScene::ShowSearchKeyboard()
+{
+	// Prevent multiple keyboard opens
+	if (m_searchLatch || m_keyboardPending) return S_OK;
+	m_searchLatch = true;
+	
+	// Close any existing event handle
+	if (m_keyboardEvent)
+	{
+		CloseHandle(m_keyboardEvent);
+		m_keyboardEvent = NULL;
+	}
+	
+	// Create event for async operation
+	m_keyboardEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (!m_keyboardEvent)
+	{
+		m_searchLatch = false;
+		return E_FAIL;
+	}
+	
+	// Initialize overlapped structure
+	memset(&m_keyboardOverlapped, 0, sizeof(XOVERLAPPED));
+	m_keyboardOverlapped.hEvent = m_keyboardEvent;
+	
+	// Initialize result buffer and pre-populate with current filter
+	memset(m_keyboardResult, 0, sizeof(m_keyboardResult));
+	// Copy current filter to result buffer (for default text)
+	if (!m_SearchFilter.empty())
+	{
+		wcsncpy(m_keyboardResult, m_SearchFilter.c_str(), sizeof(m_keyboardResult) / sizeof(WCHAR) - 1);
+		m_keyboardResult[(sizeof(m_keyboardResult) / sizeof(WCHAR)) - 1] = L'\0';  // Ensure null termination
+	}
+	
+	DWORD dwResultLength = sizeof(m_keyboardResult) / sizeof(WCHAR);
+	
+	// Show the Xbox 360 on-screen keyboard (non-blocking async call)
+	DWORD dwResult = XShowKeyboardUI(
+		0,                              // dwUserIndex (controller 1 = 0)
+		0,                              // dwFlags (0 = default keyboard)
+		m_SearchFilter.c_str(),          // pwszDefaultText - pre-populate with current filter
+		L"Search ROMs",                   // pwszTitleText
+		L"Enter game name to search",     // pwszDescriptionText
+		m_keyboardResult,                // pwszResultText - receives the entered text
+		dwResultLength,                  // cchResultText - size of result buffer
+		&m_keyboardOverlapped            // pOverlapped - for async operation
+	);
+	
+	if (dwResult == ERROR_IO_PENDING)
+	{
+		// Keyboard is now pending - will check for completion in UpdatePerFrame (non-blocking)
+		m_keyboardPending = true;
+		m_searchLatch = false;  // Allow Y button to work again after keyboard closes
+	}
+	else if (dwResult == ERROR_SUCCESS)
+	{
+		// Keyboard returned immediately (unlikely but handle it)
+		m_SearchFilter = m_keyboardResult;
+		ApplySearchFilter(m_SearchFilter);
+		CloseHandle(m_keyboardEvent);
+		m_keyboardEvent = NULL;
+		m_searchLatch = false;
+	}
+	else
+	{
+		// Error occurred
+		CloseHandle(m_keyboardEvent);
+		m_keyboardEvent = NULL;
+		m_searchLatch = false;
+	}
+	
+	return S_OK;
+}
+
+// UpdatePerFrame - called from main loop for per-frame updates (like NES emu)
+VOID CRomListScene::UpdatePerFrame()
+{
+	// Only act while we're in the ROM list scene (not during emulation)
+	if (IsCurrentlyInGame) return;
+	
+	// Check for keyboard completion if one is pending (non-blocking check)
+	if (m_keyboardPending && m_keyboardEvent)
+	{
+		DWORD dwWaitResult = WaitForSingleObject(m_keyboardEvent, 0);  // Non-blocking check
+		if (dwWaitResult == WAIT_OBJECT_0)
+		{
+			// Keyboard input completed - always process the result
+			m_keyboardPending = false;
+			
+			// Get the result text (should already be populated in m_keyboardResult by XShowKeyboardUI)
+			std::wstring newFilter = m_keyboardResult;
+			
+			// Apply the filter (even if empty - empty means show all ROMs)
+			m_SearchFilter = newFilter;
+			ApplySearchFilter(m_SearchFilter);
+			
+			CloseHandle(m_keyboardEvent);
+			m_keyboardEvent = NULL;
+		}
+	}
+	
+	// Check for search trigger (Y button) - only in ROM browser (not during emulation)
+	XINPUT_STATE state;
+	if (XInputGetState(0, &state) == ERROR_SUCCESS)
+	{
+		bool yJustPressed = (state.Gamepad.wButtons & XINPUT_GAMEPAD_Y) != 0;
+		static bool yWasPressed = false;
+		
+		if (yJustPressed && !yWasPressed && !m_keyboardPending)
+		{
+			// Y button just pressed - show keyboard
+			ShowSearchKeyboard();
+		}
+		
+		yWasPressed = yJustPressed;
+	}
+}
+
+// Called when ROMs are rescanned - store original list and re-apply filter
+VOID CRomListScene::OnRomsRescanned()
+{
+	// Store the current (unfiltered) list as original
+	m_OriginalListData = m_ListData;
+	
+	// Re-apply search filter if one exists
+	if (!m_SearchFilter.empty())
+	{
+		ApplySearchFilter(m_SearchFilter);
+	}
+}
+
+// Apply search filter to ROM list
+HRESULT CRomListScene::ApplySearchFilter(const std::wstring& filter)
+{
+	// If filter is empty, restore original list
+	if (filter.empty())
+	{
+		if (!m_OriginalListData.empty())
+		{
+			m_ListData = m_OriginalListData;
+		}
+	}
+	else
+	{
+		// Store original list if not already stored
+		if (m_OriginalListData.empty() && !m_ListData.empty())
+		{
+			m_OriginalListData = m_ListData;
+		}
+		
+		// Convert filter to lowercase for case-insensitive search
+		std::wstring filterLower = filter;
+		std::transform(filterLower.begin(), filterLower.end(), filterLower.begin(), ::towlower);
+		
+		// Convert to multibyte for comparison with ROM names
+		char filterMB[256];
+		WideCharToMultiByte(CP_ACP, 0, filterLower.c_str(), -1, filterMB, 256, NULL, NULL);
+		
+		// Filter the list
+		std::vector<std::string> filteredList;
+		for (size_t i = 0; i < m_OriginalListData.size(); i++)
+		{
+			// Convert ROM name to lowercase for comparison
+			char romLower[MAX_PATH];
+			strcpy(romLower, m_OriginalListData[i].c_str());
+			_strlwr(romLower);
+			
+			// Check if ROM name contains the filter text
+			if (strstr(romLower, filterMB) != NULL)
+			{
+				filteredList.push_back(m_OriginalListData[i]);
+			}
+		}
+		
+		m_ListData = filteredList;
+	}
+	
+	// Update the list display
+	m_RomList.DeleteItems(0, m_RomList.GetItemCount());
+	m_RomList.InsertItems(0, m_ListData.size());
+	m_RomList.SetCurSel(0);
+	
+	return S_OK;
 } 
  
