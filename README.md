@@ -10,7 +10,7 @@ Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rend
 
 > **Note:** Based on the original Xbox 360 port (Snes360 V0.32 Beta, credited to "Anonymous" in source code). **ModernVintageGamer (Dimitris)** worked extensively on the original port and **provided the source code** that made this enhanced version possible. We are **very thankful** for his contributions and for sharing the source code. The original port was a collaborative effort with multiple developers. This enhanced version **removes all achievement functionality** to prevent Xbox Live bans, along with build fixes, C89 compatibility improvements, and **Many more features and improvements are planned for future releases.**
 
-**Current Version: V0.34 Beta**
+**Current Version: V0.35 Beta**
 
 * **Toolchain:** Visual Studio 2008 SP1
 
@@ -56,6 +56,21 @@ XUI-based user interface with custom skin resources and Xbox 360 dashboard integ
 ---
 
 ## What's New
+
+### V0.35 Beta - New Features
+
+* **ROM Search Functionality:** Quick search feature to filter ROM list by name
+  * **Y Button Search:** Press **Y** button while browsing the ROM list to open the Xbox 360 on-screen keyboard
+    * Enter search text to filter ROMs in real-time
+    * Search is case-insensitive for easy finding
+    * Empty search clears the filter and shows all ROMs
+  * **Persistent Filter:** Search filter persists when switching devices or rescannning ROMs
+    * Filter remains active when navigating between storage devices
+    * Filter is maintained when ROM list is refreshed
+  * **Async Keyboard Handling:** Uses asynchronous overlapped I/O to prevent UI freezing
+    * Keyboard opens smoothly without blocking the interface
+    * Per-frame completion checking ensures responsive operation
+    * Matches the proven pattern used in the NES emulator for reliability
 
 ### V0.34 Beta - New Features
 
@@ -329,6 +344,10 @@ The compiled `.xex` executable can run on any Xbox 360 console that supports uns
 * **D-pad / Left Stick:** Navigate ROM list
 * **A:** Load selected game & start emulation
 * **B:** Back / Return to previous screen
+* **Y:** Open search keyboard to filter ROM list by name
+  * Press Y to open Xbox 360 on-screen keyboard
+  * Enter text to filter ROMs in real-time (case-insensitive)
+  * Empty search clears filter and shows all ROMs
 * **Next Device Button:** Switch between storage devices (USB, HDD, etc.)
 * **Favorites Button:** Access the favorites list page (main menu)
 * **LB (Left Bumper):** Toggle favorite status for selected ROM (while browsing ROM list)
@@ -379,7 +398,8 @@ The Xbox 360 UI is built using XUI (Xbox User Interface) scene files. The main X
 - **`RomList.xui`** - Main ROM browser/list interface
   - Displays the list of available ROM files
   - Allows browsing and selecting games to play
-  - Includes device switching, favorites management, and ROM preview functionality
+  - Includes device switching, favorites management, ROM preview, and search functionality
+  - Press Y button to open search keyboard and filter ROMs by name
   - Entry point for launching games
 
 - **`FavoritesListScene.xui`** - Favorites list interface
@@ -453,6 +473,12 @@ The original Xbox 360 port credits acknowledge the following contributors:
   - Documentation improvements
   - Default settings.xml creation
   - UI improvements
+  - **V0.35 Beta Features:**
+    - ROM search functionality with Y button
+    - Xbox 360 on-screen keyboard integration
+    - Real-time ROM list filtering
+    - Persistent search filter across device switches
+    - Async keyboard handling for smooth operation
   - **V0.34 Beta Features:**
     - FPS display counter toggle in InGameOptions menu
     - Direct3D rendering path improvements for FPS display
@@ -494,7 +520,7 @@ This software is for educational and homebrew development purposes. Use of this 
 ---
 
 **Last Updated:** 2025
-**Current Version:** V0.34 Beta  
+**Current Version:** V0.35 Beta  
 **Build System:** Visual Studio 2008 SP1 + Xbox 360 XDK 9328  
 **Target Platform:** Xbox 360 (.xex compatible consoles - RGH, JTAG, Dev Kits, etc.)  
 **Original Port:** ModernVintageGamer (Dimitris)
