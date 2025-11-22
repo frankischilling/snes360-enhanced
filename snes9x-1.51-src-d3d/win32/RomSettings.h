@@ -39,6 +39,10 @@ public:
 	bool LoadFavorites();
 	bool SaveFavorites();
 	bool Save(const string & sXmlPath);
+	
+	// Game Genie toggle
+	bool IsGameGenieEnabled() const { return m_GameGenieEnabled; }
+	void SetGameGenieEnabled(bool enabled) { m_GameGenieEnabled = enabled; }
 
 	DEFINE_XML_PROP(XboxGamePath)
 	DEFINE_XML_PROP(Xbox360GamePath)
@@ -50,6 +54,8 @@ private:
 	map<string, string> m_DeviceMap;
 	set<string> m_Favorites;
 	string m_sXmlPath;
+	bool m_GameGenieEnabled;
+	
 public:
 	string m_PreviewPath;
 };

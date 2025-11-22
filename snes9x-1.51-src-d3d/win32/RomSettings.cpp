@@ -18,7 +18,7 @@
 	}
 	
 
-CRomPathSettings::CRomPathSettings() : m_bLoaded(false)
+CRomPathSettings::CRomPathSettings() : m_bLoaded(false), m_GameGenieEnabled(false)
 {
 }
 
@@ -69,6 +69,18 @@ bool CRomPathSettings::Load(const string & sXmlPath)
 	element = root.FirstChildElement("PreviewPath").Element();
 	if (element)
 		m_PreviewPath = string(element->GetText());
+	
+	// Load GameGenieEnabled setting
+	element = root.FirstChildElement("GameGenieEnabled").Element();
+	if (element && element->GetText())
+	{
+		const char* text = element->GetText();
+		m_GameGenieEnabled = (_stricmp(text, "true") == 0 || _stricmp(text, "1") == 0);
+	}
+	else
+	{
+		m_GameGenieEnabled = false;  // Default to false if not specified
+	}
 
 	// Load favorites from text file (not from XML)
 	LoadFavorites();
@@ -274,6 +286,12 @@ bool CRomPathSettings::Save(const string & sXmlPath)
 		root->LinkEndChild( previewPath );
 	}
 	
+	// Add GameGenieEnabled setting
+	TiXmlElement * gameGenieEnabled = new TiXmlElement( "GameGenieEnabled" );
+	TiXmlText * gameGenieText = new TiXmlText( m_GameGenieEnabled ? "true" : "false" );
+	gameGenieEnabled->LinkEndChild( gameGenieText );
+	root->LinkEndChild( gameGenieEnabled );
+	
 	// Note: Favorites are now saved to a separate text file, not in XML
 	// So we don't add them to the XML document
 	
@@ -320,6 +338,12 @@ bool CRomPathSettings::CreateDefaultSettings(const string & sXmlPath)
 	TiXmlText * previewText = new TiXmlText( "hdd:\\EMUS\\SNES360\\Preview\\" );
 	previewPath->LinkEndChild( previewText );
 	root->LinkEndChild( previewPath );
+
+	// Add GameGenieEnabled (default to true)
+	TiXmlElement * gameGenieEnabled = new TiXmlElement( "GameGenieEnabled" );
+	TiXmlText * gameGenieText = new TiXmlText( "true" );
+	gameGenieEnabled->LinkEndChild( gameGenieText );
+	root->LinkEndChild( gameGenieEnabled );
 
 	// Favorites section (empty by default)
 	// No favorites added in default settings

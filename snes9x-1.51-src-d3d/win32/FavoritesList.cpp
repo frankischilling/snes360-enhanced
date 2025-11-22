@@ -9,6 +9,7 @@
 #include "RomSettings.h"
 #include "XboxContext.h"
 #include "GeneralFunctions.h"
+#include "cheats.h"  // For Game Genie code processing
 
 extern int RunEmulation(char *path, char *RomName);
 extern BOOL IsCurrentlyInGame;
@@ -16,6 +17,7 @@ extern HXUIOBJ phObj;
 extern HXUIOBJ hScene; 
 extern HXUIOBJ hMainScene;
 extern HXUIOBJ hRomListScene;
+extern HXUIOBJ hFavoritesListScene;
 extern GameStorage snesStoreage;
 extern CRomPathSettings romPaths;
 
@@ -25,6 +27,14 @@ std::vector<std::string> m_FavoritesListData;
 std::vector<std::string> m_FavoritesListPaths;  // Full paths to ROM files
 
 extern void SaveConfig(void);
+
+// Static instance pointer for per-frame updates
+static CFavoritesListScene* g_FavoritesListSceneInstance = NULL;
+
+// Global variables to store pending Game Genie codes (up to 3)
+#define MAX_GAME_GENIE_CODES 3
+char g_PendingGameGenieCodes[MAX_GAME_GENIE_CODES][256];
+int g_NumPendingGameGenieCodes = 0;
 
 CFavoritesList::CFavoritesList()
 {
@@ -249,12 +259,24 @@ HRESULT CFavoritesListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 
     if ( hObjPressed == m_FavoritesList || hObjPressed == m_PlayRom )
     {
-		XMPPause( NULL );
 		nIndex = m_FavoritesList.GetCurSel();
 		
 		// Bounds check for both arrays
 		if (nIndex >= 0 && nIndex < (int)m_FavoritesListData.size() && nIndex < (int)m_FavoritesListPaths.size())
 		{
+			// Check if Game Genie is enabled in settings
+			if (romPaths.IsGameGenieEnabled())
+			{
+				// Store the ROM index and show keyboard
+				m_pendingRomIndex = nIndex;
+				ShowGameGenieKeyboard();
+				bHandled = TRUE;
+				return S_OK;
+			}
+			
+			// Otherwise, launch ROM immediately (Game Genie disabled)
+			XMPPause( NULL );
+			
 			// Split the full path into directory and filename
 			// RunEmulation expects (directory, filename) and concatenates them internally
 			std::string fullPath = m_FavoritesListPaths[nIndex];
@@ -318,6 +340,8 @@ HRESULT CFavoritesListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 	GetChildById( L"EffectScene", &m_EffectScene );
 
 	phObj = this->m_hObj;
+	hFavoritesListScene = this->m_hObj;  // Store scene handle for UpdatePerFrame callback
+	g_FavoritesListSceneInstance = this;  // Expose instance for per-frame updates
 
 	// Only set focus and selection if list has items
 	m_FavoritesList.DiscardResources(XUI_DISCARD_ALL);
@@ -328,6 +352,14 @@ HRESULT CFavoritesListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_FavoritesList.SetFocus();
 		m_FavoritesList.SetCurSel(0);
 	}
+	
+	// Initialize Game Genie keyboard state
+	m_gameGenieKeyboardPending = false;
+	m_gameGenieKeyboardEvent = NULL;
+	memset(&m_gameGenieKeyboardOverlapped, 0, sizeof(XOVERLAPPED));
+	m_gameGenieKeyboardResult[0] = L'\0';
+	m_gameGenieLatch = false;
+	m_pendingRomIndex = -1;
 
 	bHandled = TRUE;
 
@@ -344,5 +376,252 @@ VOID CFavoritesListScene::SetEffectValue( INT nValue )
     assert( pEffectScene != NULL );
 
     pEffectScene->SetDisplacementFactor( nValue / 50.0f );
+}
+
+// Show Xbox 360 keyboard dialog for Game Genie input (async)
+HRESULT CFavoritesListScene::ShowGameGenieKeyboard()
+{
+	// Prevent multiple keyboard opens
+	if (m_gameGenieLatch || m_gameGenieKeyboardPending) return S_OK;
+	m_gameGenieLatch = true;
+	
+	// Close any existing event handle
+	if (m_gameGenieKeyboardEvent)
+	{
+		CloseHandle(m_gameGenieKeyboardEvent);
+		m_gameGenieKeyboardEvent = NULL;
+	}
+	
+	// Create event for async operation
+	m_gameGenieKeyboardEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (!m_gameGenieKeyboardEvent)
+	{
+		m_gameGenieLatch = false;
+		return E_FAIL;
+	}
+	
+	// Initialize overlapped structure
+	memset(&m_gameGenieKeyboardOverlapped, 0, sizeof(XOVERLAPPED));
+	m_gameGenieKeyboardOverlapped.hEvent = m_gameGenieKeyboardEvent;
+	
+	// Initialize result buffer
+	memset(m_gameGenieKeyboardResult, 0, sizeof(m_gameGenieKeyboardResult));
+	
+	DWORD dwResultLength = sizeof(m_gameGenieKeyboardResult) / sizeof(WCHAR);
+	
+	// Show the Xbox 360 on-screen keyboard (non-blocking async call)
+	DWORD dwResult = XShowKeyboardUI(
+		0,                                    // dwUserIndex (controller 1 = 0)
+		0,                                    // dwFlags (0 = default keyboard)
+		L"",                                  // pwszDefaultText - empty for new input
+		L"Game Genie Codes",                  // pwszTitleText
+		L"Enter up to 3 codes separated by comma or space", // pwszDescriptionText
+		m_gameGenieKeyboardResult,            // pwszResultText - receives the entered text
+		dwResultLength,                       // cchResultText - size of result buffer
+		&m_gameGenieKeyboardOverlapped        // pOverlapped - for async operation
+	);
+	
+	if (dwResult == ERROR_IO_PENDING)
+	{
+		// Keyboard is now pending - will check for completion in UpdatePerFrame (non-blocking)
+		m_gameGenieKeyboardPending = true;
+		m_gameGenieLatch = false;
+	}
+	else if (dwResult == ERROR_SUCCESS)
+	{
+		// Keyboard returned immediately (unlikely but handle it)
+		// Launch the ROM now
+		LaunchPendingRom();
+		CloseHandle(m_gameGenieKeyboardEvent);
+		m_gameGenieKeyboardEvent = NULL;
+		m_gameGenieLatch = false;
+	}
+	else
+	{
+		// Error occurred - just launch the ROM anyway
+		LaunchPendingRom();
+		CloseHandle(m_gameGenieKeyboardEvent);
+		m_gameGenieKeyboardEvent = NULL;
+		m_gameGenieLatch = false;
+	}
+	
+	return S_OK;
+}
+
+// Helper to launch the pending ROM after keyboard input
+VOID CFavoritesListScene::LaunchPendingRom()
+{
+	if (m_pendingRomIndex < 0 || m_pendingRomIndex >= (int)m_FavoritesListData.size() || m_pendingRomIndex >= (int)m_FavoritesListPaths.size())
+	{
+		m_pendingRomIndex = -1;
+		return;
+	}
+	
+	XMPPause( NULL );
+	
+	// Split the full path into directory and filename
+	std::string fullPath = m_FavoritesListPaths[m_pendingRomIndex];
+	std::string dir, file;
+	
+	// Find the last path separator
+	size_t lastSep = fullPath.find_last_of("\\/");
+	if (lastSep == std::string::npos)
+	{
+		// No separator found, treat entire string as filename
+		dir = "";
+		file = fullPath;
+	}
+	else
+	{
+		// Split at the separator (include separator in directory)
+		dir = fullPath.substr(0, lastSep + 1);
+		file = fullPath.substr(lastSep + 1);
+	}
+	
+	// Create the InGameOptions scene and navigate to it
+	HRESULT hr = XuiSceneCreate( L"file://game:/media/Snes360.xzp#..\\Xbox\\Skin\\", L"InGameOptions.xur", NULL, &hScene );
+	if (SUCCEEDED(hr))
+	{
+		this->NavigateForward(hScene);
+		
+		// Pass directory and filename separately
+		RunEmulation((char *)dir.c_str(), (char *)file.c_str());
+		
+		SaveConfig();
+		
+		XuiDestroyObject( hScene );
+	}
+	XMPContinue( NULL );
+	
+	// Reset pending state
+	m_pendingRomIndex = -1;
+}
+
+// UpdatePerFrame - called from main loop for per-frame updates
+VOID CFavoritesListScene::UpdatePerFrame()
+{
+	// Only act while we're in the favorites list scene (not during emulation)
+	if (IsCurrentlyInGame) return;
+	
+	// Check for Game Genie keyboard completion if one is pending (non-blocking check)
+	if (m_gameGenieKeyboardPending && m_gameGenieKeyboardEvent)
+	{
+		DWORD dwWaitResult = WaitForSingleObject(m_gameGenieKeyboardEvent, 0);  // Non-blocking check
+		if (dwWaitResult == WAIT_OBJECT_0)
+		{
+			// Keyboard input completed - process the Game Genie code
+			m_gameGenieKeyboardPending = false;
+			
+			// Process the Game Genie codes if user entered something
+			g_NumPendingGameGenieCodes = 0;
+			
+			if (m_gameGenieKeyboardResult[0] != L'\0')
+			{
+				// Convert wide string to char string
+				char codeBuffer[256];
+				WideCharToMultiByte(CP_ACP, 0, m_gameGenieKeyboardResult, -1, codeBuffer, sizeof(codeBuffer), NULL, NULL);
+				
+				// Parse multiple codes (separated by comma or space)
+				char *context = NULL;
+				char *token = strtok_s(codeBuffer, ", ", &context);
+				
+				int validCodeCount = 0;
+				char errorBuffer[512] = "";
+				bool hasError = false;
+				
+				while (token != NULL && validCodeCount < MAX_GAME_GENIE_CODES)
+				{
+					// Remove spaces and convert to uppercase
+					char cleanCode[256];
+					int j = 0;
+					for (int i = 0; token[i] != '\0' && j < 255; i++)
+					{
+						if (token[i] != ' ' && token[i] != '\t')
+						{
+							cleanCode[j++] = toupper(token[i]);
+						}
+					}
+					cleanCode[j] = '\0';
+					
+					// Skip empty tokens
+					if (strlen(cleanCode) > 0)
+					{
+						// Validate the Game Genie code format
+						uint32 address;
+						uint8 byte;
+						const char *error = S9xGameGenieToRaw(cleanCode, address, byte);
+						
+						if (error == NULL)
+						{
+							// Valid Game Genie code - store it for later
+							strcpy_s(g_PendingGameGenieCodes[validCodeCount], sizeof(g_PendingGameGenieCodes[validCodeCount]), cleanCode);
+							validCodeCount++;
+							
+							// Debug: Output the code details
+							char debugMsg[256];
+							sprintf_s(debugMsg, "Game Genie code #%d: %s validated (Address=0x%06X, Byte=0x%02X)\n", 
+									  validCodeCount, cleanCode, address, byte);
+							OutputDebugStringA(debugMsg);
+						}
+						else
+						{
+							// Invalid code - add to error message
+							char tempError[256];
+							sprintf_s(tempError, "Code '%s': %s\n", cleanCode, error);
+							strcat_s(errorBuffer, sizeof(errorBuffer), tempError);
+							hasError = true;
+						}
+					}
+					
+					// Get next token
+					token = strtok_s(NULL, ", ", &context);
+				}
+				
+				// Check if too many codes were entered
+				if (token != NULL)
+				{
+					strcat_s(errorBuffer, sizeof(errorBuffer), "\nMaximum 3 codes allowed!");
+					hasError = true;
+				}
+				
+				// Show error if any codes were invalid
+				if (hasError)
+				{
+					WCHAR errorMsg[512];
+					MultiByteToWideChar(CP_ACP, 0, errorBuffer, -1, errorMsg, 512);
+					
+					const WCHAR * button_text = L"OK";
+					ShowMessageBoxEx(NULL, NULL, L"Game Genie Error", errorMsg, 1, (LPCWSTR*)&button_text, NULL, XUI_MB_CENTER_ON_PARENT, NULL);
+					
+					// Don't launch the ROM if any code is invalid
+					CloseHandle(m_gameGenieKeyboardEvent);
+					m_gameGenieKeyboardEvent = NULL;
+					m_pendingRomIndex = -1;
+					return;
+				}
+				
+				// Store the count of valid codes
+				g_NumPendingGameGenieCodes = validCodeCount;
+				
+				// Show success message if codes were entered
+				if (validCodeCount > 0)
+				{
+					char successMsgA[512];
+					sprintf_s(successMsgA, "%d code%s will be activated!", validCodeCount, validCodeCount > 1 ? "s" : "");
+					
+					WCHAR successMsg[512];
+					MultiByteToWideChar(CP_ACP, 0, successMsgA, -1, successMsg, 512);
+					
+					OutputDebugStringA("All codes validated successfully\n");
+				}
+			}
+			
+			// Launch the ROM (whether code was entered or not)
+			LaunchPendingRom();
+			
+			CloseHandle(m_gameGenieKeyboardEvent);
+			m_gameGenieKeyboardEvent = NULL;
+		}
+	}
 }
 

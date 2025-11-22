@@ -14,6 +14,22 @@
 #include "GeneralFunctions.h"
 #include "snes9x.h"
 
+// Forward declaration for Xbox keyboard UI if not in xui.h
+#ifndef XShowKeyboardUI
+extern "C" {
+	DWORD WINAPI XShowKeyboardUI(
+		DWORD dwUserIndex,
+		DWORD dwFlags,
+		LPCWSTR pwszDefaultText,
+		LPCWSTR pwszTitleText,
+		LPCWSTR pwszDescriptionText,
+		LPWSTR pwszResultText,
+		DWORD cchResultText,
+		XOVERLAPPED* pOverlapped
+	);
+}
+#endif
+
 #ifndef FAVORITESLIST_H
 #define FAVORITESLIST_H
 
@@ -57,10 +73,23 @@ protected:
 		XUI_ON_XM_NOTIFY_PRESS( OnNotifyPress )
     XUI_END_MSG_MAP()
 
+private:
+	// Game Genie keyboard support
+	bool m_gameGenieKeyboardPending;  // True when Game Genie keyboard is open
+	HANDLE m_gameGenieKeyboardEvent;  // Event handle for Game Genie keyboard
+	XOVERLAPPED m_gameGenieKeyboardOverlapped;  // Overlapped structure for Game Genie keyboard
+	WCHAR m_gameGenieKeyboardResult[256];  // Buffer to hold Game Genie keyboard result
+	bool m_gameGenieLatch;  // Prevents multiple keyboard opens
+	int m_pendingRomIndex;  // Index of ROM waiting to launch after keyboard
+	
+	HRESULT ShowGameGenieKeyboard();  // Show Game Genie keyboard before launching ROM
+	VOID LaunchPendingRom();  // Launch ROM after keyboard input
+
 public:
     HRESULT OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
 	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
 	VOID   SetEffectValue( INT nValue );
+	VOID   UpdatePerFrame();  // Called from main loop for per-frame updates
 
 public:
     // Define the class. The class name must match the ClassOverride property

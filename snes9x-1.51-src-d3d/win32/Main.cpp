@@ -59,6 +59,12 @@ XMP_SONGDESCRIPTOR g_SongDescriptors[] =
 GameStorage snesStoreage;
 char    GamerName[ 256 ];
 
+// Scene handles
+HXUIOBJ hScene;
+HXUIOBJ hMainScene;
+HXUIOBJ hRomListScene;
+HXUIOBJ hFavoritesListScene;
+
 //BYTE* m_Achievements;  // Achievements disabled
 //DWORD dwAchievementCount = 0;  // Achievements disabled
 
@@ -397,12 +403,11 @@ public:
         {
 			OutputDebugStringW(L"Favorites button pressed - loading scene\n");
 			// Favorites button - load FavoritesListScene.xur
-			HXUIOBJ hFavoritesScene;
-			HRESULT hr = XuiSceneCreate( L"file://game:/media/Snes360.xzp#..\\Xbox\\Skin\\", L"FavoritesListScene.xur", NULL, &hFavoritesScene );
+			HRESULT hr = XuiSceneCreate( L"file://game:/media/Snes360.xzp#..\\Xbox\\Skin\\", L"FavoritesListScene.xur", NULL, &hFavoritesListScene );
 			if (SUCCEEDED(hr))
 			{
 				OutputDebugStringW(L"FavoritesListScene.xur loaded successfully, navigating...\n");
-				this->NavigateForward(hFavoritesScene);
+				this->NavigateForward(hFavoritesListScene);
 			}
 			else
 			{
@@ -704,11 +709,6 @@ BOOL IsCurrentlyInGame = false;
 CSnes360App app;
 CRomPathSettings romPaths;
 HXUIOBJ phObj = NULL;
-
-// In Game Scene
-HXUIOBJ hScene;
-HXUIOBJ hMainScene;
-HXUIOBJ hRomListScene;
  
 
 VOID __cdecl main()
@@ -816,6 +816,16 @@ VOID __cdecl main()
 			{
 				CRomListScene* pScene = NULL;
 				if (SUCCEEDED(XuiObjectFromHandle(hRomListScene, (VOID**)&pScene)))
+				{
+					pScene->UpdatePerFrame();
+				}
+			}
+			
+			// Per-frame updates for Favorites list scene (Game Genie keyboard handling, etc.)
+			if (hFavoritesListScene)
+			{
+				CFavoritesListScene* pScene = NULL;
+				if (SUCCEEDED(XuiObjectFromHandle(hFavoritesListScene, (VOID**)&pScene)))
 				{
 					pScene->UpdatePerFrame();
 				}

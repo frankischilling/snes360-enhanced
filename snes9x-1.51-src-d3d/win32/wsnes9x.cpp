@@ -3169,6 +3169,53 @@ int RunEmulation(char *path, char *RomName)
 		if(!loaded) // help migration from earlier Snes9x versions by checking ROM directory for savestates
 			Memory.LoadSRAM (S9xGetFilename (".srm", ROMFILENAME_DIR));
         S9xLoadCheatFile (S9xGetFilename (".cht", CHEAT_DIR));
+        
+        // Apply pending Game Genie codes from keyboard entry (if any)
+        #define MAX_GAME_GENIE_CODES 3
+        extern char g_PendingGameGenieCodes[MAX_GAME_GENIE_CODES][256];
+        extern int g_NumPendingGameGenieCodes;
+        
+        if (g_NumPendingGameGenieCodes > 0)
+        {
+        	int appliedCount = 0;
+        	for (int i = 0; i < g_NumPendingGameGenieCodes && i < MAX_GAME_GENIE_CODES; i++)
+        	{
+        		if (strlen(g_PendingGameGenieCodes[i]) > 0)
+        		{
+        			uint32 address;
+        			uint8 byte;
+        			const char *error = S9xGameGenieToRaw(g_PendingGameGenieCodes[i], address, byte);
+        			if (error == NULL)
+        			{
+        				S9xAddCheat(TRUE, FALSE, address, byte);
+        				appliedCount++;
+        				
+        				char debugMsg[256];
+        				sprintf(debugMsg, "Game Genie code #%d: %s applied (Address=0x%06X, Byte=0x%02X)\n", 
+        						i + 1, g_PendingGameGenieCodes[i], address, byte);
+        				OutputDebugStringA(debugMsg);
+        			}
+        		}
+        	}
+        	
+        	// Apply all cheats at once
+        	if (appliedCount > 0)
+        	{
+        		S9xApplyCheats();
+        		
+        		char debugMsg[256];
+        		sprintf(debugMsg, "Total %d Game Genie code(s) applied successfully\n", appliedCount);
+        		OutputDebugStringA(debugMsg);
+        	}
+        	
+        	// Clear all pending codes
+        	g_NumPendingGameGenieCodes = 0;
+        	for (int i = 0; i < MAX_GAME_GENIE_CODES; i++)
+        	{
+        		g_PendingGameGenieCodes[i][0] = '\0';
+        	}
+        }
+        
         CheckDirectoryIsWritable (S9xGetFilename (".---", SNAPSHOT_DIR));
         CheckMenuStates ();
     }
