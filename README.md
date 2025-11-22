@@ -1,8 +1,18 @@
 # snes360-enhanced (Snes9x-360 tweaks)
 
+![ROM Browser](/img/rombrowser.jpg)
+
+![Favorites](/img/favorites.jpg)
+
+![About](/img/about.jpg)
+
 Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rendering and Xbox 360-specific optimizations. Core emulation code remains intact; improvements are limited to the Xbox UI layer (XUI scenes, Direct3D rendering, XAudio2 audio, input handling).
 
-> **Note:** Based on the original Xbox 360 port (Snes360 V0.32 Beta, credited to "Anonymous" in source code). **ModernVintageGamer (Dimitris)** is known to have contributed to the original port, which was a collaborative effort with multiple developers. This enhanced version **removes all achievement functionality** to prevent Xbox Live bans, along with build fixes, C89 compatibility improvements, and **Many more features and improvements are planned for future releases.**
+> **Note:** Based on the original Xbox 360 port (Snes360 V0.32 Beta, credited to "Anonymous" in source code). **ModernVintageGamer (Dimitris)** worked extensively on the original port and **provided the source code** that made this enhanced version possible. We are **very thankful** for his contributions and for sharing the source code. The original port was a collaborative effort with multiple developers. This enhanced version **removes all achievement functionality** to prevent Xbox Live bans, along with build fixes, C89 compatibility improvements, and **Many more features and improvements are planned for future releases.**
+
+> **Note:** This can also be built with newer versions of Visual Studio and the Xbox 360 SDK/XDK. If you want to update from Visual Studio 2008, try using Visual Studio 2010. Confirmed working on Xbox 360 SDK 21256.3.
+
+**Current Version: V0.36 Beta**
 
 * **Toolchain:** Visual Studio 2008 SP1
 
@@ -11,7 +21,7 @@ Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rend
 * **Target:** Xbox 360 (RGH/JTAG/Dev Kits), retail-runnable `.xex`
 
 * **Original Port:** Anonymous (Snes360 V0.32 Beta, 07-16-2010) - Original Xbox 360 port of Snes9x
-* **Known Contributors:** ModernVintageGamer (Dimitris) and others (see Credits section)
+* **Source Code Provider:** ModernVintageGamer (Dimitris) - Provided the source code and worked extensively on the original port (see Credits section)
 
 ---
 
@@ -21,9 +31,11 @@ Enhanced Xbox 360 port of the Snes9x 1.51 SNES emulator focused on Direct3D rend
 - [What's New](#whats-new)
 - [Repository Layout](#repository-layout)
 - [Build](#build)
+- [Building the XZP Package (Customizing the XUI Skin)](#building-the-xzp-package-customizing-the-xui-skin)
 - [Deploy to Xbox 360](#deploy-to-xbox-360-rghjtagdev-kits)
 - [Controls](#controls)
 - [Technical Notes](#technical-notes)
+  - [XUI Scene Files](#xui-scene-files)
 - [Troubleshooting](#troubleshooting)
 - [Credits](#credits)
 
@@ -47,6 +59,81 @@ XUI-based user interface with custom skin resources and Xbox 360 dashboard integ
 
 ## What's New
 
+### V0.36 Beta - New Features (Latest)
+
+* **Game Genie Cheat Code Support:** Enter cheat codes before launching games from Favorites
+  * **Keyboard Input:** Xbox 360 on-screen keyboard appears when launching from Favorites List
+    * Enter up to 3 Game Genie codes at once (separated by comma or space)
+    * Example: `C222-D4DD,8B99-17DD,DD8C-C7A7` (Super Mario World codes)
+    * Press Select/B to skip entering codes and launch normally
+  * **Automatic Validation:** Codes are validated before ROM loads
+    * Invalid codes show detailed error messages
+    * ROM won't launch if any code is invalid (prevents typos)
+    * Uses standard Game Genie format (XXXX-XXXX)
+  * **Real-time Application:** Codes applied immediately after ROM initialization
+    * Uses SNES9x's built-in `S9xGameGenieToRaw()`, `S9xAddCheat()`, and `S9xApplyCheats()` functions
+    * Codes are active from the moment gameplay starts
+  * **XML Configuration:** Enable/disable via `settings.xml`
+    * Add `<GameGenieEnabled>true</GameGenieEnabled>` to enable (default: true)
+    * Set to `false` to launch ROMs immediately without keyboard
+  * **Favorites Only:** Game Genie keyboard only appears when launching from Favorites List
+    * Add games to favorites first (press LB in ROM list)
+    * Regular ROM list launches games immediately (no keyboard)
+  * **Multiple Code Support:** Up to 3 codes per session
+    * Comma separated: `C222-D4DD,8B99-17DD,DD8C-C7A7`
+    * Space separated: `C222-D4DD 8B99-17DD DD8C-C7A7`
+    * Mixed separators also work
+
+### V0.35 Beta - New Features
+
+* **ROM Search Functionality:** Quick search feature to filter ROM list by name
+  * **Y Button Search:** Press **Y** button while browsing the ROM list to open the Xbox 360 on-screen keyboard
+    * Enter search text to filter ROMs in real-time
+    * Search is case-insensitive for easy finding
+    * Empty search clears the filter and shows all ROMs
+  * **Persistent Filter:** Search filter persists when switching devices or rescannning ROMs
+    * Filter remains active when navigating between storage devices
+    * Filter is maintained when ROM list is refreshed
+  * **Async Keyboard Handling:** Uses asynchronous overlapped I/O to prevent UI freezing
+    * Keyboard opens smoothly without blocking the interface
+    * Per-frame completion checking ensures responsive operation
+    * Matches the proven pattern used in the NES emulator for reliability
+
+### V0.34 Beta - New Features
+
+* **FPS Display Counter:** New frame rate display toggle in InGameOptions menu
+  * **Display FPS Toggle:** Added "Display FPS" checkbox in the in-game options menu
+    * Accessible via InGameOptions menu (press both thumbsticks during gameplay)
+    * Shows current frame rate in the top-right corner of the screen
+    * Toggle on/off to show or hide the FPS counter
+  * **Persistent Setting:** FPS display preference is saved and persists across game sessions
+  * **Direct3D Support:** FPS counter now works correctly on Xbox 360 Direct3D rendering path
+  * **Real-time Display:** Shows frame rate as "XX/YY" format (current FPS / target FPS)
+
+### V0.33 Beta - New Features
+
+* **Favorites System:** Complete favorites management system for organizing your ROM collection
+  * **Favorites List Page:** Dedicated favorites page accessible from the main menu
+    * Shows all your favorite games in one convenient list
+    * Quick access to your most-played games
+    * Sorted alphabetically for easy browsing
+  * **Add/Remove Favorites:** Easy favorite management
+    * Press **LB (Left Bumper)** while browsing ROMs to toggle favorite status
+    * Or use the "Add to Favorites" button in the ROM list
+    * Favorites are saved automatically
+  * **Favorite Tags in ROM List:** Visual indicators for favorites
+    * Favorite games show a **[Favorite]** tag prefix in the main ROM list
+    * Helps identify favorites at a glance
+    * ROM list sorts alphabetically (favorites mixed in, not separated)
+  * **Persistent Storage:** Favorites are saved to `settings.xml` and persist across sessions
+
+* **Enhanced XZP Build Script:** Improved `Build_XZP.bat` script for creating XZP packages
+  * **Smart File Filtering:** Automatically excludes graphics files (PNG, JPG, etc.) when duplicating
+    * Only duplicates XUR, XUI, XML, TTF, XMA, and other non-graphics files
+    * Prevents unnecessary duplication of large image files
+    * Reduces XZP file size while maintaining functionality
+  * **Streamlined Process:** Easier XZP package creation for custom skins
+
 ### ⚠️ CRITICAL: Achievement System Completely Removed
 
 * **All Xbox Live Achievement Functionality Removed:** Complete removal of achievement system to prevent Xbox Live bans
@@ -63,21 +150,6 @@ XUI-based user interface with custom skin resources and Xbox 360 dashboard integ
   * **Replacement:** Created `XboxContext.h` with minimal context/property definitions for Xbox Live presence only (zero achievement code)
 
 > **Important:** If you're using a modded Xbox 360 console, using achievement systems in homebrew can result in permanent Xbox Live bans. This build eliminates that risk entirely.
-
-### v0.36 - Game Genie Cheat Code Support (Latest)
-
-* **Game Genie Support in Favorites List:** Enter cheat codes before launching games
-  * **Keyboard Input:** Xbox 360 on-screen keyboard appears when launching from Favorites
-  * **Multiple Codes:** Support for up to 3 Game Genie codes at once (comma or space separated)
-  * **Validation:** Codes are validated before ROM loads - invalid codes show errors
-  * **XML Toggle:** Enable/disable via `<GameGenieEnabled>true</GameGenieEnabled>` in settings.xml
-  * **Example Usage:** `C222-D4DD,8B99-17DD,DD8C-C7A7` (Super Mario World infinite lives + more)
-  * **Standard Format:** Uses standard Game Genie format (XXXX-XXXX)
-  * **Real-time Application:** Codes applied immediately after ROM initialization
-  * **Files Modified:** `FavoritesList.cpp`, `FavoritesList.h`, `wsnes9x.cpp`, `Main.cpp`, `RomSettings.cpp`, `RomSettings.h`
-  * **Implementation:** Uses SNES9x's built-in `S9xGameGenieToRaw()`, `S9xAddCheat()`, and `S9xApplyCheats()` functions
-
-> **Note:** Game Genie keyboard only appears in Favorites List, not regular ROM list. Add games to favorites first (press LB in ROM list).
 
 ### Build Fixes & Enhancements
 
@@ -185,6 +257,77 @@ The Xbox 360 build uses the following key preprocessor definitions:
 
 ---
 
+## Building the XZP Package (Customizing the XUI Skin)
+
+The XZP (XUI Package) file contains all the skin resources (XUR files, images, fonts, etc.) used by the Xbox 360 UI. To customize the skin or add new XUR files, you'll need to rebuild the `Snes360.xzp` package.
+
+### Prerequisites
+
+- **XZP Tool 2.0** - Tool for extracting and examining XZP archives
+- A working `Snes360.xzp` file from a current build
+- The `Build_XZP.bat` script (included in the repository root)
+
+### Steps to Customize and Rebuild the XZP
+
+1. **Extract the Current XZP**
+   - Use **XZP Tool 2.0** to extract a current working build of `Snes360.xzp`
+   - This will give you the base structure and all existing skin files
+
+2. **Set Up the Folder Structure**
+   - Create the following directory structure:
+     ```
+     C:\Users\imike\Desktop\snes360-enhanced\Xbox\Xbox\Skin\
+     ```
+   - Copy all extracted files from the XZP into this `Xbox\Xbox\Skin\` folder
+   - Maintain the same directory structure (including the `Graphics\` subfolder if present)
+
+3. **Add Your Custom XUR Files**
+   - Place your new or modified XUR files in `Xbox\Xbox\Skin\`
+   - **Important:** Also copy your new XUR files to the source directory:
+     ```
+     snes9x-1.51-src-d3d\xbox\Skin\
+     ```
+   - This ensures the files are available in both locations for the build process
+
+4. **Run the Build Script**
+   - Open a command prompt in the repository root directory
+   - Run `Build_XZP.bat`
+   - The script will:
+     - Create a new `Snes360.xzp` file in the repository root
+     - Include files from both `snes9x-1.51-src-d3d\xbox\Skin\` and `Xbox\Xbox\Skin\`
+     - Preserve the relative path structure (`..\Xbox\Skin\`) inside the XZP
+     - Maintain duplicate files with different table offsets (matching original structure)
+
+5. **Deploy to Xbox 360**
+   - Copy the newly created `Snes360.xzp` to your Xbox 360
+   - Replace the existing `Snes360.xzp` in your `media` folder on the Xbox
+   - The exact location depends on your setup, typically:
+     ```
+     Hdd1:\Emulators\Snes360\media\Snes360.xzp
+     ```
+     or wherever your `media` folder is located
+
+### Build Script Details
+
+The `Build_XZP.bat` script:
+- Runs from the `snes9x-1.51-src-d3d\win32\` directory (matching the original build process)
+- First adds files from `..\xbox\Skin\*` (source directory) - includes all files (graphics and non-graphics)
+- Then appends files from `..\..\Xbox\Xbox\Skin\*` (your custom directory) using the `/a` (append) flag
+  - **Smart Filtering:** Automatically filters out graphics files (PNG, JPG, JPEG, GIF, BMP) when duplicating
+  - Only duplicates non-graphics files: XUR, XUI, XML, TTF, XMA, WAV, 3XUI
+  - Prevents unnecessary duplication of large image files
+  - Reduces final XZP file size
+- Creates duplicates with different table offsets to match the original XZP structure
+- Outputs `Snes360.xzp` in the repository root directory
+
+### Notes
+
+- The script preserves the relative path structure `..\Xbox\Skin\` inside the XZP archive
+- Duplicate files (like `filemanager.xur`) with different sizes and table offsets are intentionally maintained to match the original build structure
+- Always test your custom XZP on the Xbox 360 before deploying to ensure fonts and resources load correctly
+
+---
+
 ## Deploy to Xbox 360 (RGH/JTAG/Dev Kits)
 
 ### Requirements
@@ -226,17 +369,29 @@ The compiled `.xex` executable can run on any Xbox 360 console that supports uns
 
 ### Front-End (ROM Browser)
 * **D-pad / Left Stick:** Navigate ROM list
-* **A:** Load selected game & start emulation (Game Genie keyboard appears if in Favorites and enabled)
+* **A:** Load selected game & start emulation
 * **B:** Back / Return to previous screen
-* **LB:** Add/Remove game from Favorites
-* **Y:** Search ROMs (opens keyboard to filter list)
+* **Y:** Open search keyboard to filter ROM list by name
+  * Press Y to open Xbox 360 on-screen keyboard
+  * Enter text to filter ROMs in real-time (case-insensitive)
+  * Empty search clears filter and shows all ROMs
 * **Next Device Button:** Switch between storage devices (USB, HDD, etc.)
+* **Favorites Button:** Access the favorites list page (main menu)
+* **LB (Left Bumper):** Toggle favorite status for selected ROM (while browsing ROM list)
+* **Add to Favorites Button:** Add/remove selected ROM from favorites
+* **Game Genie Codes (Favorites Only):** Enter cheat codes when launching from Favorites
+  * Press **A** on a favorite game to open Game Genie keyboard
+  * Enter up to 3 codes (comma or space separated): `C222-D4DD,8B99-17DD`
+  * Press **Select/B** to skip codes and launch normally
+  * Codes are validated before ROM loads - invalid codes show errors
 
 ### In-Game
 * **D-pad / Left Stick:** SNES D-pad
 * **A, B, X, Y:** SNES buttons
 * **LB, RB:** SNES shoulder buttons
 * **START, BACK:** SNES Start/Select
+* **Both Thumbsticks (Press):** Open InGameOptions menu
+  * Access save/load state, filters, aspect ratio, point filtering, mute audio, **FPS display**, and more
 * **LEFT_THUMB + LT:** Screenshot (if implemented)
 * **START + BACK:** OSD/Menu (if implemented)
 
@@ -267,6 +422,38 @@ The Xbox 360 build uses a standalone CRC32 implementation to avoid linking again
 - Provides both `emu_crc32()` and `calc_crc32()` functions
 - Also provides `crc32()` wrapper matching zlib's signature for unzip code compatibility
 - Includes zlib.h for type definitions (`uLong`, `Bytef`, `uInt`) but uses standalone implementation
+
+### XUI Scene Files
+
+The Xbox 360 UI is built using XUI (Xbox User Interface) scene files. The main XUI files are located in `xbox/Skin/` and define the user interface screens:
+
+- **`RomList.xui`** - Main ROM browser/list interface
+  - Displays the list of available ROM files
+  - Allows browsing and selecting games to play
+  - Includes device switching, favorites management, ROM preview, and search functionality
+  - Press Y button to open search keyboard and filter ROMs by name
+  - Entry point for launching games
+
+- **`FavoritesListScene.xui`** - Favorites list interface
+  - Dedicated page showing all favorite games
+  - Accessible from the main menu via the Favorites button
+  - Provides quick access to frequently played games
+  - Allows launching games directly from favorites list
+  - **Game Genie support:** Press A on a favorite to enter cheat codes before launch
+  - Supports up to 3 Game Genie codes per session (comma or space separated)
+
+- **`InGameOptions.xui`** - In-game pause menu/options interface
+  - Accessible during gameplay by pressing both thumbsticks
+  - Provides access to:
+    - Save/Load state functionality
+    - Video filters (Simple 2x, Scanlines, TV Mode, Super Eagle, etc.)
+    - Display options (Aspect Ratio, Point Filtering, FPS Display)
+    - Audio options (Mute Audio)
+    - Screen adjustment controls
+    - Preview capture
+    - Exit game option
+
+These XUI files are packaged into the `Snes360.xzp` archive along with associated resources (images, fonts, sounds) and loaded at runtime. Customizing these files allows you to modify the appearance and behavior of the Xbox 360 UI.
 
 ---
 
@@ -301,9 +488,11 @@ The Xbox 360 build uses a standalone CRC32 implementation to avoid linking again
   - XAudio2 audio integration
   - Xbox 360 controller support
   - XUI integration
-- **ModernVintageGamer (Dimitris)** - Known contributor to the Xbox 360 port
-  - Worked on the original Xbox 360 port alongside other developers
-  - Note: The original port was a collaborative effort with multiple contributors
+- **ModernVintageGamer (Dimitris)** - Original Xbox 360 port contributor and source code provider
+  - Worked extensively on the original Xbox 360 port alongside other developers
+  - **Provided the source code** that made this enhanced version possible
+  - We are **very thankful** for his contributions and for sharing the source code
+  - The original port was a collaborative effort with multiple contributors
 
 ### Original Port Contributors & Credits
 The original Xbox 360 port credits acknowledge the following contributors:
@@ -314,13 +503,32 @@ The original Xbox 360 port credits acknowledge the following contributors:
 ### Enhanced Version
 - **frankischilling** - Current maintainer
   - Achievements removed for safety (prevents Xbox Live bans)
-  - Game Genie cheat code support (v0.36)
-  - ROM search feature (v0.35)
-  - Favorites system (v0.34)
   - Build fixes and compatibility improvements
   - Documentation improvements
   - Default settings.xml creation
   - UI improvements
+  - **V0.36 Beta Features:**
+    - Game Genie cheat code support in Favorites List
+    - Multi-code support (up to 3 codes per session)
+    - Code validation before ROM launch
+    - XML configuration toggle (`<GameGenieEnabled>`)
+    - Async keyboard handling for Game Genie input
+    - Integration with SNES9x's built-in cheat system
+  - **V0.35 Beta Features:**
+    - ROM search functionality with Y button
+    - Xbox 360 on-screen keyboard integration
+    - Real-time ROM list filtering
+    - Persistent search filter across device switches
+    - Async keyboard handling for smooth operation
+  - **V0.34 Beta Features:**
+    - FPS display counter toggle in InGameOptions menu
+    - Direct3D rendering path improvements for FPS display
+    - InGameOptions menu navigation enhancements
+  - **V0.33 Beta Features:**
+    - Favorites system implementation
+    - Favorites list page
+    - Favorite tags in ROM list
+    - Enhanced XZP build script with smart file filtering
 
 ### Core Emulator
 - **Snes9x Team** - Original Snes9x emulator
@@ -353,6 +561,7 @@ This software is for educational and homebrew development purposes. Use of this 
 ---
 
 **Last Updated:** 2025
+**Current Version:** V0.36 Beta  
 **Build System:** Visual Studio 2008 SP1 + Xbox 360 XDK 9328  
 **Target Platform:** Xbox 360 (.xex compatible consoles - RGH, JTAG, Dev Kits, etc.)  
 **Original Port:** ModernVintageGamer (Dimitris)
