@@ -583,8 +583,6 @@ public:
 		// Set version text dynamically
 		m_VersionText.SetText(L"Version 0.35 Beta");
 	 
-		UpdatePresence(CONTEXT_GAMESTATE_IDLE);
- 
 		SetEffectValue( 20 );
 
         return S_OK;
@@ -938,19 +936,6 @@ VOID __cdecl main()
     CloseHandle( hEventComplete );
     */
 //}  // Achievements disabled
-
-void UpdatePresence(DWORD type)
-{	 
-	XUserSetContext(  snesStoreage.GetSignedInUser(), CONTEXT_GAMESTATE, type );	
-
-	            int iCursorY = 32;
-                                   
-
-	XUserSetProperty( snesStoreage.GetSignedInUser(), PROPERTY_NUM_ROMS, sizeof( iCursorY ), &iCursorY );
-
-	XUserSetContext(  snesStoreage.GetSignedInUser(), X_CONTEXT_PRESENCE, CONTEXT_PRESENCE_PRESENCE );
-
-}
  
 //void DoAchievo(DWORD AchievoID)  // Achievements disabled
 //{
