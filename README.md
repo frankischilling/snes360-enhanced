@@ -560,7 +560,7 @@ This software is for educational and homebrew development purposes. Use of this 
 
 ---
 
-**Last Updated:** 2025
+**Last Updated:** 2026
 **Current Version:** V0.36 Beta  
 **Build System:** Visual Studio 2008 SP1 + Xbox 360 XDK 9328  
 **Target Platform:** Xbox 360 (.xex compatible consoles - RGH, JTAG, Dev Kits, etc.)  
