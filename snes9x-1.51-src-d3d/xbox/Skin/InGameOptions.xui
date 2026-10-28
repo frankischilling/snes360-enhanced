@@ -73,7 +73,7 @@
 <Width>329.000000</Width>
 <Height>37.000000</Height>
 <Position>28.080000,181.360001,0.000000</Position>
-<NavUp>XuiOptionsScene\XuiSaveStateButton</NavUp>
+<NavUp>XuiOptionsScene\XuiFPS</NavUp>
 <NavDown>XuiFilterScanlines</NavDown>
 <Text>Simple 2x</Text>
 </Properties>
@@ -192,7 +192,7 @@
 <NavLeft>XuiSaveStateButton</NavLeft>
 <NavRight>XuiButtonReset</NavRight>
 <NavUp>XuiMuteAudio</NavUp>
-<NavDown>XuiRadioGroup1\XuiFilterSimple2x</NavDown>
+<NavDown>XuiFPS</NavDown>
 <Text>Keep Aspect Ratio</Text>
 </Properties>
 </XuiCheckbox>
@@ -257,7 +257,7 @@
 <Position>130.279999,102.932007,0.000000</Position>
 <NavLeft>XuiButtonExitGame</NavLeft>
 <NavRight>XuiSaveStateButton</NavRight>
-<NavUp>XuiSoundFilt</NavUp>
+<NavUp>XuiRadioGroup1\XuiFilterHQ2x</NavUp>
 <NavDown>XuiMuteAudio</NavDown>
 <Text>Point Filtering</Text>
 </Properties>
@@ -349,7 +349,7 @@
 <Position>131.726776,227.363953,0.000000</Position>
 <NavLeft>XuiSaveStateButton</NavLeft>
 <NavRight>XuiButtonReset</NavRight>
-<NavUp>XuiMuteAudio</NavUp>
+<NavUp>XuiAspectRatio</NavUp>
 <NavDown>XuiRadioGroup1\XuiFilterSimple2x</NavDown>
 <Text>Display FPS</Text>
 </Properties>

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "GeneralFunctions.h"
+#include "RomLaunch.h"
 
 #include "snes9x.h"
 
@@ -118,6 +119,8 @@ protected:
 
  
 public:
+    CRomListScene();
+    ~CRomListScene();
     HRESULT OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
 	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
 	HRESULT OnRender( XUIMessageRender* pRenderData, BOOL& bHandled );
@@ -125,6 +128,7 @@ public:
 	VOID   OnRomsRescanned();  // Called when ROMs are rescanned to re-apply search filter
 	
 private:
+	CRomLaunch m_launch;
 	bool m_bLBWasPressed;
 	bool m_bYWasPressed;
 	std::wstring m_SearchFilter;

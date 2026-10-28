@@ -5,7 +5,7 @@ libraries, and UI resources used by snes360-enhanced.
 
 See the [project README](../README.md) for features, controls, installation,
 build instructions, validation, credits, and license information. The current
-version is 0.37 Beta, and achievements are removed.
+version is 0.38 Beta, and achievements are removed.
 
 Open `win32/snes9xw.sln` for the Visual Studio 2008 Xbox 360 build, or run
 `tools/Build-Release.ps1` from the repository root. Build `Release|Xbox 360`;

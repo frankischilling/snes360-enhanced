@@ -5,7 +5,7 @@ Direct3D 9 and HLSL shaders for video, XAudio2 for audio, Xbox 360 controllers,
 and XUI scenes for the interface. The changes focus on the Xbox 360 front end
 and build support. The SNES emulation core comes from Snes9x.
 
-Current version: 0.37 Beta.
+Current version: 0.38 Beta.
 
 Achievements are removed. The source has no achievement handlers, triggers,
 generated headers, or SPA data. The XEX image settings do not embed a SPA
@@ -29,14 +29,16 @@ These screenshots show earlier versions of the interface.
   Favorites button. Favorites have a `[Favorite]` tag in the alphabetically
   sorted ROM list and appear on a separate Favorites page. They are stored in
   `favorites.txt` beside the executable.
-- Enter up to three Game Genie codes when launching a game from Favorites.
+  On the Favorites page, press LB or select Remove favorite to remove the
+  selected game. The list updates immediately; removing the last game returns
+  focus to Main Menu.
+- Enter up to three Game Genie codes when launching from the ROM browser or Favorites.
   Separate codes with commas, spaces, or a mixture of both. For example:
   `C222-D4DD,8B99-17DD,DD8C-C7A7`. Codes use the `XXXX-XXXX` format. Invalid codes
   show an error and prevent launch; valid codes are applied after ROM loading.
-  Cancel the keyboard with B to launch without codes. Launching from the
-  regular ROM list skips this keyboard.
+  Cancel the keyboard with B to launch without codes.
 - Enable the Game Genie keyboard with `<GameGenieEnabled>true</GameGenieEnabled>`
-  in `settings.xml`. Set it to `false` to launch from Favorites immediately.
+  in `settings.xml`. Set it to `false` to launch immediately from either list.
   Newly created settings enable it; an existing file without the setting
   leaves it disabled.
 - Open the in-game menu by pressing both thumbsticks. It includes save and load
@@ -50,6 +52,8 @@ frame so the interface can keep updating while the keyboard is open.
 
 ## Changes by version
 
+- 0.38 Beta adds Favorites removal, brings Game Genie input to the ROM browser,
+  repairs FPS checkbox navigation, and fixes a long-title buffer overflow.
 - 0.37 Beta removes the remaining achievement code, metadata, and menu entry.
   It also removes calls to the deleted presence function, fixes the TinyXML
   build dependency and library path, and updates the displayed version.
@@ -61,7 +65,7 @@ frame so the interface can keep updating while the keyboard is open.
 
 Earlier build fixes added a standalone CRC32 implementation, C89-compatible
 variable declarations, and Xbox 360 project definitions. More details for the
-current release are in [the release notes](docs/release-0.37.md).
+current release are in [the release notes](docs/release-0.38.md).
 
 ## Install or update
 
@@ -109,6 +113,7 @@ settings and favorites. ROMs and personal data are not included in releases.
 | Main menu | Favorites | Open the favorites list |
 | ROM browser | Next Device | Switch storage devices |
 | Favorites | A | Launch, with the Game Genie keyboard if enabled |
+| Favorites | LB or Remove favorite | Remove the selected game |
 | Game Genie keyboard | B | Cancel and launch without codes |
 | In game | D-pad or left stick | SNES D-pad |
 | In game | A, B, X, Y | SNES face buttons |
@@ -201,7 +206,14 @@ the required package files, and the XZP for old achievement strings.
 Pass `--map "snes9x-1.51-src-d3d/win32/Xbox 360/Release/Snes360.map"` to check
 that the linker discarded achievement functions from the SDK as well.
 
-The 0.37 release is compiled with Visual Studio 2008 SP1 and XDK 2.0.9328.0.
+Run `python tests/check_navigation.py` to check the FPS and Favorites navigation
+paths. CI also compiles the shared launch code and favorites persistence code
+with SDK substitutes, then runs component tests under address and undefined
+behavior sanitizers. These tests cover 6,000-entry selection, long titles,
+filtering, keyboard completion and errors, cancellation, and saved favorites.
+The compiler commands are in `.github/workflows/source-audit.yml`.
+
+The 0.38 release is compiled with Visual Studio 2008 SP1 and XDK 2.0.9328.0.
 Build and package inspection do not establish console runtime behavior.
 Console launch, menu navigation, and gameplay still need hardware testing.
 
@@ -232,6 +244,7 @@ deployment when no development console is configured.
 | `snes9x-1.51-src-d3d/unzip/` | ZIP extraction |
 | `snes9x-1.51-src-d3d/doc/` | Upstream manuals, history, and licenses |
 | `tools/` | Build and audit scripts |
+| `tests/` | Frontend component tests and UI navigation checks |
 | `docs/` | Release notes |
 | `dist/` | Local build packages, excluded from Git |
 

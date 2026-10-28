@@ -3,7 +3,7 @@
 #define TINYXML_H
 #pragma once
 
-#include "tinyxml\tinyxml.h"
+#include "TinyXML/tinyxml.h"
 #include <string>
 #include <map>
 #include <set>

@@ -283,10 +283,7 @@ HRESULT CInGameOptions::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 			m_MuteAudio.SetCheck(true);
 		}
 
-		if (Settings.DisplayFrameRate)
-		{
-			m_FPSDisplay.SetCheck(true);
-		}
+		m_FPSDisplay.SetCheck(Settings.DisplayFrameRate != 0);
 
 		switch(Settings.Filter)
 		{

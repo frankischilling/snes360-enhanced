@@ -42,6 +42,8 @@
 <UnfocusedInput>true</UnfocusedInput>
 <NavUp>XuiRomList</NavUp>
 <NavDown>XuiRomList</NavDown>
+<NavLeft>XuiMainMenu</NavLeft>
+<NavRight>XuiRemoveFavorite</NavRight>
 <Text>Play</Text>
 </Properties>
 </XuiButton>
@@ -99,6 +101,8 @@
 <UnfocusedInput>true</UnfocusedInput>
 <NavUp>XuiRomList</NavUp>
 <NavDown>XuiRomList</NavDown>
+<NavLeft>XuiRemoveFavorite</NavLeft>
+<NavRight>XuiPlay</NavRight>
 <Text>Main Menu</Text>
 <PressKey>22593</PressKey>
 </Properties>
@@ -113,6 +117,19 @@
 <Visual>BackgroundPanel</Visual>
 </Properties>
 </XuiControl>
+<XuiButton>
+<Properties>
+<Id>XuiRemoveFavorite</Id>
+<Width>220.000000</Width>
+<Height>35.605591</Height>
+<Position>99.000000,665.143921,0.000000</Position>
+<NavUp>XuiRomList</NavUp>
+<NavDown>XuiRomList</NavDown>
+<NavLeft>XuiPlay</NavLeft>
+<NavRight>XuiMainMenu</NavRight>
+<Text>Remove favorite (LB)</Text>
+</Properties>
+</XuiButton>
 <XuiList>
 <Properties>
 <Id>XuiRomList</Id>

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "GeneralFunctions.h"
+#include "RomLaunch.h"
 #include "snes9x.h"
 
 // Forward declaration for Xbox keyboard UI if not in xui.h
@@ -61,6 +62,7 @@ class CFavoritesListScene : public CXuiSceneImpl
 protected:
     // Control and Element wrapper objects.
     CXuiControl m_PlayRom;
+    CXuiControl m_RemoveFavorite;
 	CXuiControl m_Back; 
 	CXuiElement m_PreviewImage;
 	CXuiList m_FavoritesList;
@@ -74,18 +76,13 @@ protected:
     XUI_END_MSG_MAP()
 
 private:
-	// Game Genie keyboard support
-	bool m_gameGenieKeyboardPending;  // True when Game Genie keyboard is open
-	HANDLE m_gameGenieKeyboardEvent;  // Event handle for Game Genie keyboard
-	XOVERLAPPED m_gameGenieKeyboardOverlapped;  // Overlapped structure for Game Genie keyboard
-	WCHAR m_gameGenieKeyboardResult[256];  // Buffer to hold Game Genie keyboard result
-	bool m_gameGenieLatch;  // Prevents multiple keyboard opens
-	int m_pendingRomIndex;  // Index of ROM waiting to launch after keyboard
-	
-	HRESULT ShowGameGenieKeyboard();  // Show Game Genie keyboard before launching ROM
-	VOID LaunchPendingRom();  // Launch ROM after keyboard input
+	CRomLaunch m_launch;
+	bool m_bLBWasPressed;
+	void RemoveSelectedFavorite();
 
 public:
+    CFavoritesListScene() : m_bLBWasPressed(false) {}
+    ~CFavoritesListScene();
     HRESULT OnInit( XUIMessageInit* pInitData, BOOL& bHandled );
 	HRESULT OnNotifyPress( HXUIOBJ hObjPressed, BOOL& bHandled );
 	VOID   SetEffectValue( INT nValue );

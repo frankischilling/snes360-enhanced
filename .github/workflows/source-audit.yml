@@ -16,3 +16,12 @@ jobs:
         with:
           python-version: '3.12'
       - run: python tools/audit-release.py
+      - run: python tests/check_navigation.py
+      - name: Frontend component tests
+        run: |
+          g++ -std=c++03 -Wall -Wextra -fsanitize=address,undefined -Itests/shims -Isnes9x-1.51-src-d3d/win32 tests/frontend_test.cpp snes9x-1.51-src-d3d/win32/RomLaunch.cpp -o /tmp/frontend-test
+          /tmp/frontend-test
+      - name: Favorites persistence tests
+        run: |
+          g++ -std=c++03 -Wall -Wextra -fsanitize=address,undefined -Itests/shims -Isnes9x-1.51-src-d3d/win32 -Isnes9x-1.51-src-d3d tests/favorites_test.cpp snes9x-1.51-src-d3d/win32/RomSettings.cpp snes9x-1.51-src-d3d/TinyXML/tinystr.cpp snes9x-1.51-src-d3d/TinyXML/tinyxml.cpp snes9x-1.51-src-d3d/TinyXML/tinyxmlparser.cpp snes9x-1.51-src-d3d/TinyXML/tinyxmlerror.cpp -o /tmp/favorites-test
+          /tmp/favorites-test

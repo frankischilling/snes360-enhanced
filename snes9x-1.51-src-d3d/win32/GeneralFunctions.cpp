@@ -1,5 +1,6 @@
 
 #include "GeneralFunctions.h"
+#include "TitleText.h"
 #include "Direct3D.h"
 #include "KernelExports.h"
 
@@ -161,13 +162,11 @@ VOID UnloadFile( VOID* pFileData )
 }
 
 
-wchar_t ucString[42];
-
 LPCWSTR MultiCharToUniChar(char* mbString)
 {
-	int len = strlen(mbString) + 1;	
-	mbstowcs(ucString, mbString, len);
-	return (LPCWSTR)ucString;
+    static std::wstring text;
+    text = RomTitleText(mbString);
+    return text.c_str();
 }
 
 
@@ -291,4 +290,4 @@ HRESULT LoadPixelShader( const CHAR* strFileName, LPDIRECT3DPIXELSHADER9* ppPS, 
 
     return hr;
 }
- 
+

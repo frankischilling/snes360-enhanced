@@ -182,8 +182,8 @@ bool CRomPathSettings::SaveFavorites()
 	// If no favorites, delete the file if it exists
 	if (m_Favorites.empty())
 	{
-		DeleteFile(favoritesPath.c_str());
-		return true;
+		if (DeleteFile(favoritesPath.c_str())) return true;
+        return GetLastError() == ERROR_FILE_NOT_FOUND;
 	}
 	
 	// Open file for writing (create or truncate)
@@ -209,27 +209,35 @@ bool CRomPathSettings::SaveFavorites()
 	return true;
 }
 
-bool CRomPathSettings::AddFavorite(const string & sRomName)
+bool CRomPathSettings::AddFavorite(const string& name)
 {
-	if (sRomName.empty())
-		return false;
-		
-	m_Favorites.insert(sRomName);
-	return SaveFavorites();
+    if (name.empty()) return false;
+    if (IsFavorite(name)) return true;
+    m_Favorites.insert(name);
+    if (SaveFavorites()) return true;
+    m_Favorites.erase(name);
+    return false;
 }
 
-bool CRomPathSettings::RemoveFavorite(const string & sRomName)
+bool CRomPathSettings::RemoveFavorite(const string& name)
 {
-	if (sRomName.empty())
-		return false;
-		
-	m_Favorites.erase(sRomName);
-	return SaveFavorites();
+    if (name.empty()) return false;
+    set<string> saved = m_Favorites;
+    for (set<string>::iterator it = m_Favorites.begin(); it != m_Favorites.end(); )
+    {
+        if (_stricmp(it->c_str(), name.c_str()) == 0) m_Favorites.erase(it++);
+        else ++it;
+    }
+    if (SaveFavorites()) return true;
+    m_Favorites.swap(saved);
+    return false;
 }
 
-bool CRomPathSettings::IsFavorite(const string & sRomName) const
+bool CRomPathSettings::IsFavorite(const string& name) const
 {
-	return m_Favorites.find(sRomName) != m_Favorites.end();
+    for (set<string>::const_iterator it = m_Favorites.begin(); it != m_Favorites.end(); ++it)
+        if (_stricmp(it->c_str(), name.c_str()) == 0) return true;
+    return false;
 }
 
 set<string> CRomPathSettings::GetFavorites() const

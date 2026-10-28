@@ -73,11 +73,13 @@ def audit_package(package):
         "Snes360.xex", "media/Snes360.xzp", "media/Snes360.ttf",
         "media/XuiEffect_Texture.png", "media/saveicon.png", "saveicon.png",
         "media/Shaders/ShadeXuiEffectVertex.xvu", "media/Shaders/ShadeXuiEffectPixel.xpu",
-        "README.md", "LICENSE", "snes9x-license.txt", "release-0.37.md",
+        "README.md", "LICENSE", "snes9x-license.txt",
     )
     for name in required:
         path = package / name
         require(path.is_file() and path.stat().st_size > 0, f"Missing or empty package file: {name}")
+    version = (ROOT / "VERSION").read_text().strip()
+    require((package / f"release-{version}.md").is_file(), "Missing current release notes")
     for path in package.rglob("*"):
         if path.is_file():
             require(path.suffix.lower() not in {".spa", ".xlast", ".gpd"}, f"Old package metadata: {path}")

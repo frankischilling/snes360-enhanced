@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
+$version = (Get-Content -LiteralPath (Join-Path $repo 'VERSION') -Raw).Trim()
 if (-not $OutputDirectory) {
     $OutputDirectory = Join-Path $repo ('dist\build-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 }
@@ -61,6 +62,6 @@ if ($BackgroundMusic) {
 Copy-Item -LiteralPath (Join-Path $repo 'README.md'), (Join-Path $repo 'LICENSE') -Destination $package
 Copy-Item -LiteralPath (Join-Path $source 'doc\snes9x-license.txt') -Destination $package
 Copy-Item -LiteralPath (Join-Path $source 'doc\GPL-2'), (Join-Path $source 'doc\LGPL-2.1') -Destination $package
-Copy-Item -LiteralPath (Join-Path $repo 'docs\release-0.37.md') -Destination $package
+Copy-Item -LiteralPath (Join-Path $repo "docs\release-$version.md") -Destination $package
 Write-Output "Release files: $package"
 Write-Output 'Inspect the XEX and package before creating a release archive.'

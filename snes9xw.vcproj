@@ -4325,6 +4325,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\RomLaunch.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\RomList.cpp"
 				>
 			</File>

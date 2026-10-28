@@ -409,7 +409,7 @@ public:
 		if( hObjPressed == m_button4 )
 		{
 			const WCHAR * button_text = L"OK";
-			ShowMessageBoxEx(NULL,NULL,L"About", L"Snes360 V0.37 Beta\n\nOriginal by Anonymous\n07-16-2010 11:59pm\n\nEnhanced by frankischilling\n2025\n\nGreets to r0wdy, Arak0n, kl0wn, idc, direw0lf, PeteNub, MomDad, Odb718, Angerwound, Redline99, TJ_CRS, Xenon7, Xantium, _skitzo_\n\nDonations not required!\n\nFUCK Hawk, Jester\n\n", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
+			ShowMessageBoxEx(NULL,NULL,L"About", L"Snes360 V0.38 Beta\n\nOriginal by Anonymous\n07-16-2010 11:59pm\n\nEnhanced by frankischilling\n2025\n\nGreets to r0wdy, Arak0n, kl0wn, idc, direw0lf, PeteNub, MomDad, Odb718, Angerwound, Redline99, TJ_CRS, Xenon7, Xantium, _skitzo_\n\nDonations not required!\n\nFUCK Hawk, Jester\n\n", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
 			
 
 		}
@@ -560,7 +560,7 @@ public:
 		//GetChildById( L"XuiLogo", &m_Logo );
 		 
 		// Set version text dynamically
-		m_VersionText.SetText(L"Version 0.37 Beta");
+		m_VersionText.SetText(L"Version 0.38 Beta");
 	 
 		SetEffectValue( 20 );
 

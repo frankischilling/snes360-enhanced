@@ -1,5 +1,6 @@
 #include <xmp.h>
 #include "RomList.h"
+#include "RomFilter.h"
 #include "Storage.h"
 #include "Main.h"
 #include "RomSettings.h"
@@ -23,8 +24,23 @@ map<string,string>::iterator romPath;
 std::string ReplaceCharInString(const std::string & source, char charToReplace, const std::string replaceString);
 bool g_bShowFavoritesOnly = false;  // Flag to show only favorites
 
-// Static instance pointer for per-frame updates
-static CRomListScene* g_RomListSceneInstance = NULL;
+CRomListScene::CRomListScene() : m_bLBWasPressed(false), m_bYWasPressed(false),
+    m_searchLatch(false), m_keyboardPending(false), m_keyboardEvent(NULL)
+{
+    memset(&m_keyboardOverlapped, 0, sizeof(m_keyboardOverlapped));
+    m_keyboardResult[0] = L'\0';
+}
+
+CRomListScene::~CRomListScene()
+{
+    if (m_keyboardPending)
+    {
+        XCancelOverlapped(&m_keyboardOverlapped);
+        XGetOverlappedResult(&m_keyboardOverlapped, NULL, TRUE);
+    }
+    if (m_keyboardEvent) CloseHandle(m_keyboardEvent);
+    if (hRomListScene == m_hObj) hRomListScene = NULL;
+}
 
 
 void SaveConfig(void)
@@ -66,25 +82,16 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
     {
 		int nIndex;
 
-        if ( hObjPressed == m_RomList )
+        if (m_launch.Busy() || m_keyboardPending) { bHandled = TRUE; return S_OK; }
+        if (hObjPressed == m_RomList || hObjPressed == m_PlayRom)
         {
-			XMPPause( NULL );
-			nIndex = m_RomList.GetCurSel();
-						
-			XuiSceneCreate( L"file://game:/media/Snes360.xzp#..\\Xbox\\Skin\\", L"InGameOptions.xur", NULL, &hScene );
-			this->NavigateForward(hScene);			
-			
-			RunEmulation((char *)romPath->second.c_str(), (char *)m_ListData[nIndex].c_str()); 	
-
-			SaveConfig();
-
-			XuiDestroyObject( hScene );
-			XMPContinue( NULL ); 
-			bHandled = TRUE;
-			return S_OK;
-			
+            nIndex = m_RomList.GetCurSel();
+            if (nIndex >= 0 && nIndex < (int)m_ListData.size() && romPath != romPaths.GetDeviceMapEnd())
+                m_launch.Begin(*this, romPath->second, m_ListData[nIndex], romPaths.IsGameGenieEnabled());
+            bHandled = TRUE;
+            return S_OK;
         }
-		else if (hObjPressed == m_NextDevice)
+        else if (hObjPressed == m_NextDevice)
 		{
 			XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
 
@@ -154,12 +161,13 @@ HRESULT CRomListScene::OnNotifyPress( HXUIOBJ hObjPressed,
 
 HRESULT CRomListScene::OnRender( XUIMessageRender* pRenderData, BOOL& bHandled )
 {
+	if (IsCurrentlyInGame || m_launch.Busy() || m_keyboardPending || !XuiElementTreeHasFocus(m_hObj))
+    { bHandled = FALSE; return S_OK; }
 	// Check for LB button press to toggle favorite
 	XINPUT_STATE state;
 	if (XInputGetState(0, &state) == ERROR_SUCCESS)
 	{
 		bool lbPressed = (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) != 0;
-		bool yPressed = (state.Gamepad.wButtons & XINPUT_GAMEPAD_Y) != 0;
 		
 		// Detect LB button press (wasn't pressed before, is pressed now)
 		if (lbPressed && !m_bLBWasPressed)
@@ -187,7 +195,6 @@ HRESULT CRomListScene::OnRender( XUIMessageRender* pRenderData, BOOL& bHandled )
 		}
 		
 		m_bLBWasPressed = lbPressed;
-		m_bYWasPressed = yPressed;
 	}
 	
 	bHandled = FALSE;  // Let other handlers process render too
@@ -225,7 +232,6 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
  
 		phObj = this->m_hObj;
 		hRomListScene = this->m_hObj;  // Store scene handle for OnRescanRoms callback
-		g_RomListSceneInstance = this;  // Expose instance for per-frame updates
 
 		m_RomList.DiscardResources(XUI_DISCARD_ALL);
 		m_RomList.SetFocus();
@@ -248,7 +254,7 @@ HRESULT CRomListScene::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		m_bYWasPressed = false;
 		// Clear search filter on init
 		m_SearchFilter.clear();
-		m_OriginalListData.clear();
+		m_OriginalListData = m_ListData;
 		// Initialize keyboard state
 		m_searchLatch = false;
 		m_keyboardPending = false;
@@ -296,7 +302,7 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 	wchar_t previewPath[MAX_PATH];
 	 
 
-	HXUIOBJ hPreviewImage;
+	HXUIOBJ hPreviewImage = NULL;
 
 	int nIndex = 0;
 	switch(hObj->dwNotify)
@@ -304,12 +310,16 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 		case XN_SELCHANGED:
 			 						 
 			nIndex = XuiListGetCurSel( this->m_hObj, NULL );
+            if (nIndex < 0 || nIndex >= (int)m_ListData.size()) break;
+            HXUIOBJ owner = NULL;
+            XuiElementGetParent(m_hObj, &owner);
 			
 			const char *fname = GetFilename((char *)romPaths.m_PreviewPath.c_str(), (char *)m_ListData[nIndex].c_str(), "png");
-			XuiElementGetChildById( phObj, 
+			XuiElementGetChildById( owner,
                 L"XuiRomPreview", &hPreviewImage );
 
-			string previewName(fname);
+			if (!fname || !hPreviewImage) break;
+            string previewName(fname);
 
 		  
 			
@@ -455,7 +465,9 @@ HRESULT CRomList::OnRescanRoms( char *szPath,  BOOL& bHandled )
 	
 	// If there's a scene instance, notify it that rescanning is complete
 	// so it can store the original list and re-apply any search filter
-	if (hRomListScene)
+	HXUIOBJ owner = NULL;
+    XuiElementGetParent(m_hObj, &owner);
+	if (hRomListScene && hRomListScene == owner)
 	{
 		CRomListScene* pScene = NULL;
 		if (SUCCEEDED(XuiObjectFromHandle(hRomListScene, (VOID**)&pScene)))
@@ -642,6 +654,8 @@ VOID CRomListScene::UpdatePerFrame()
 {
 	// Only act while we're in the ROM list scene (not during emulation)
 	if (IsCurrentlyInGame) return;
+    m_launch.Update();
+    if (m_launch.Busy()) return;
 	
 	// Check for keyboard completion if one is pending (non-blocking check)
 	if (m_keyboardPending && m_keyboardEvent)
@@ -664,87 +678,42 @@ VOID CRomListScene::UpdatePerFrame()
 		}
 	}
 	
+	if (!XuiElementTreeHasFocus(m_hObj)) return;
 	// Check for search trigger (Y button) - only in ROM browser (not during emulation)
 	XINPUT_STATE state;
 	if (XInputGetState(0, &state) == ERROR_SUCCESS)
 	{
 		bool yJustPressed = (state.Gamepad.wButtons & XINPUT_GAMEPAD_Y) != 0;
-		static bool yWasPressed = false;
 		
-		if (yJustPressed && !yWasPressed && !m_keyboardPending)
+
+		if (yJustPressed && !m_bYWasPressed && !m_keyboardPending)
 		{
 			// Y button just pressed - show keyboard
 			ShowSearchKeyboard();
 		}
 		
-		yWasPressed = yJustPressed;
+		m_bYWasPressed = yJustPressed;
 	}
 }
 
 // Called when ROMs are rescanned - store original list and re-apply filter
 VOID CRomListScene::OnRomsRescanned()
 {
-	// Store the current (unfiltered) list as original
-	m_OriginalListData = m_ListData;
-	
-	// Re-apply search filter if one exists
-	if (!m_SearchFilter.empty())
-	{
-		ApplySearchFilter(m_SearchFilter);
-	}
+    m_OriginalListData = m_ListData;
+    m_ListData = FilterRomNames(m_OriginalListData, m_SearchFilter);
 }
 
-// Apply search filter to ROM list
 HRESULT CRomListScene::ApplySearchFilter(const std::wstring& filter)
 {
-	// If filter is empty, restore original list
-	if (filter.empty())
-	{
-		if (!m_OriginalListData.empty())
-		{
-			m_ListData = m_OriginalListData;
-		}
-	}
-	else
-	{
-		// Store original list if not already stored
-		if (m_OriginalListData.empty() && !m_ListData.empty())
-		{
-			m_OriginalListData = m_ListData;
-		}
-		
-		// Convert filter to lowercase for case-insensitive search
-		std::wstring filterLower = filter;
-		std::transform(filterLower.begin(), filterLower.end(), filterLower.begin(), ::towlower);
-		
-		// Convert to multibyte for comparison with ROM names
-		char filterMB[256];
-		WideCharToMultiByte(CP_ACP, 0, filterLower.c_str(), -1, filterMB, 256, NULL, NULL);
-		
-		// Filter the list
-		std::vector<std::string> filteredList;
-		for (size_t i = 0; i < m_OriginalListData.size(); i++)
-		{
-			// Convert ROM name to lowercase for comparison
-			char romLower[MAX_PATH];
-			strcpy(romLower, m_OriginalListData[i].c_str());
-			_strlwr(romLower);
-			
-			// Check if ROM name contains the filter text
-			if (strstr(romLower, filterMB) != NULL)
-			{
-				filteredList.push_back(m_OriginalListData[i]);
-			}
-		}
-		
-		m_ListData = filteredList;
-	}
-	
-	// Update the list display
-	m_RomList.DeleteItems(0, m_RomList.GetItemCount());
-	m_RomList.InsertItems(0, m_ListData.size());
-	m_RomList.SetCurSel(0);
-	
-	return S_OK;
-} 
- 
+    // Remove old rows before changing the backing vector used by XUI callbacks.
+    int oldCount = m_RomList.GetItemCount();
+    if (oldCount > 0) m_RomList.DeleteItems(0, oldCount);
+    m_ListData = FilterRomNames(m_OriginalListData, filter);
+    if (!m_ListData.empty())
+    {
+        m_RomList.InsertItems(0, m_ListData.size());
+        m_RomList.SetCurSel(0);
+    }
+    else XuiImageElementSetImagePath(m_PreviewImage.m_hObj, L"");
+    return S_OK;
+}
