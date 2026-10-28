@@ -2,6 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Snes360", "snes9xw.vcproj", "{B86059D8-C9A6-46BE-8FBA-3170C54F1DFD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4DAABDBA-B137-4429-9175-D6CC8A1BAEEE} = {4DAABDBA-B137-4429-9175-D6CC8A1BAEEE}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TinyXML", "..\TinyXML\TinyXML.vcproj", "{4DAABDBA-B137-4429-9175-D6CC8A1BAEEE}"
 EndProject

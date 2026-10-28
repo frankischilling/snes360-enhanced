@@ -7,7 +7,6 @@
 #include "Storage.h"
 #include "Main.h"
 #include "RomSettings.h"
-#include "XboxContext.h"
 #include "GeneralFunctions.h"
 #include "cheats.h"  // For Game Genie code processing
 
@@ -195,7 +194,6 @@ HRESULT CFavoritesList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 			break;
 	}
 
-	UpdatePresence(CONTEXT_GAMESTATE_BROWSING_ROMS);
 
 	return S_OK;
 }

@@ -4,8 +4,6 @@
 #include "Main.h"
 #include "RomSettings.h"
 #include <set>
-//#include "Snes 360.spa.h"  // Achievements disabled
-#include "XboxContext.h"  // Minimal context/property definitions (achievements excluded)
  
 
 extern int RunEmulation(char *path, char *RomName);
@@ -328,7 +326,6 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 
 	}
 
-	UpdatePresence(CONTEXT_GAMESTATE_BROWSING_ROMS);
 
 	return S_OK;
 

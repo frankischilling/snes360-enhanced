@@ -194,7 +194,6 @@
 #include "controls.h"
 #include "movie.h"
 
-#include "Achievements.spa.h"
 
 #include "Storage.h"
 
@@ -241,8 +240,6 @@ EXTERN_C uint8 *SFXPlotTable;
 static bool8	stopMovie = TRUE;
 static char		LastRomFilename[_MAX_PATH + 1] = "";
 
-//extern void DoAchievo(DWORD AcheivoID);  // Achievements disabled
-extern void UpdatePresence(DWORD type);
 
 
 static const uint32	crc32Table[256] =
@@ -1137,29 +1134,6 @@ again:
 	S9xReset();
 
 
-	if (strcmp(strlwr(ROMName),"super metroid") == 0)
-	{
-		//DoAchievo(2);  // Achievements disabled
-	}
-	else if (strcmp(strlwr(ROMName), "super punch-out!!") == 0)
-	{
-		//DoAchievo(4);  // Achievements disabled
-	}
-	else if (strcmp(strlwr(ROMName), "super mario kart") == 0)
-	{
-		//DoAchievo(3);  // Achievements disabled
-	}
-	else if (strcmp(strlwr(ROMName),"super marioworld") == 0)
-	{
-		//DoAchievo(6);  // Achievements disabled
-	}
-	else if (strcmp(strlwr(ROMName),"star fox 2") == 0)
-	{
-		//DoAchievo(ACHIEVEMENT_LEAKER);  // Achievements disabled
-	}
-
-	 
-	UpdatePresence(CONTEXT_GAMESTATE_INGAME);
 		
     return (TRUE);
 }

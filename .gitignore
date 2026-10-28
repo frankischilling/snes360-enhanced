@@ -1,0 +1,20 @@
+/dist/
+*.obj
+*.sbr
+*.pdb
+*.idb
+*.ncb
+*.suo
+*.user
+*.updb
+*.bsc
+BuildLog.htm
+/snes9x-1.51-src-d3d/win32/Release/
+/snes9x-1.51-src-d3d/win32/Debug/
+/snes9x-1.51-src-d3d/win32/Xbox 360/
+/snes9x-1.51-src-d3d/win32/snes9x.exe
+/snes9x-1.51-src-d3d/win32/*.xdb
+/snes9x-1.51-src-d3d/win32/snes9x.exe.manifest
+__pycache__/
+/snes9x-1.51-src-d3d/TinyXML/Release/
+/snes9x-1.51-src-d3d/TinyXML/Debug/

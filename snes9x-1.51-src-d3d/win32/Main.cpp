@@ -18,19 +18,11 @@
 #include "Storage.h"
 #include "RomSettings.h"
 
-//#include "achievements.spa.h"  // Achievements disabled
-#include "XboxContext.h"  // Minimal context/property definitions (achievements excluded)
 
-//static const DWORD  ACHIEVEMENT_COUNT = 5;
 
 extern void XboxSetDefaultValues();
 
 
-//struct AchievementPicture  // Achievements disabled
-//{
-//    IDirect3DTexture9* Texture;        // Texture of the picture
-//    DWORD dwImageId;				   // Id of the picture
-//};
 
 
 // XMP Stuff
@@ -54,7 +46,6 @@ XMP_SONGDESCRIPTOR g_SongDescriptors[] =
     }
 };
 
-//AchievementPicture gAchievement;  // Achievements disabled
 
 GameStorage snesStoreage;
 char    GamerName[ 256 ];
@@ -65,11 +56,7 @@ HXUIOBJ hMainScene;
 HXUIOBJ hRomListScene;
 HXUIOBJ hFavoritesListScene;
 
-//BYTE* m_Achievements;  // Achievements disabled
-//DWORD dwAchievementCount = 0;  // Achievements disabled
 
-//void DoAchievo(DWORD AcheivoID);  // Achievements disabled
-//VOID EnumerateAchievements();  // Achievements disabled
 
 
 
@@ -355,7 +342,6 @@ public:
 protected:
     CXuiControl m_RomList;
 	CXuiNavButton m_button2;  // Favorites button
-	CXuiControl m_button3;
 	CXuiControl m_button4;
 	CXuiControl m_button5;
 	CXuiControl m_Storage;
@@ -423,8 +409,7 @@ public:
 		if( hObjPressed == m_button4 )
 		{
 			const WCHAR * button_text = L"OK";
-			ShowMessageBoxEx(NULL,NULL,L"About", L"Snes360 V0.35 Beta\n\nOriginal by Anonymous\n07-16-2010 11:59pm\n\nEnhanced by frankischilling\n2025\n\nGreets to r0wdy, Arak0n, kl0wn, idc, direw0lf, PeteNub, MomDad, Odb718, Angerwound, Redline99, TJ_CRS, Xenon7, Xantium, _skitzo_\n\nDonations not required!\n\nFUCK Hawk, Jester\n\n", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
-			//DoAchievo(ACHIEVEMENT_FREEXEX_DISS);  // Achievements disabled
+			ShowMessageBoxEx(NULL,NULL,L"About", L"Snes360 V0.37 Beta\n\nOriginal by Anonymous\n07-16-2010 11:59pm\n\nEnhanced by frankischilling\n2025\n\nGreets to r0wdy, Arak0n, kl0wn, idc, direw0lf, PeteNub, MomDad, Odb718, Angerwound, Redline99, TJ_CRS, Xenon7, Xantium, _skitzo_\n\nDonations not required!\n\nFUCK Hawk, Jester\n\n", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
 			
 
 		}
@@ -454,10 +439,6 @@ public:
 		{
 		 	snesStoreage.ShowDeviceUI();
 			return S_OK;
-		}
-		else if (hObjPressed == m_button3)
-		{
-			//XShowAchievementsUI( snesStoreage.GetSignedInUser() );  // Achievements disabled
 		}
 		else
 		{
@@ -567,9 +548,7 @@ public:
         {
             OutputDebugStringW(L"WARNING: Favorites button (XuiFavorites) not found!\n");
         }
-        GetChildById( L"XuiOptions", &m_button3 );
 		
-		m_button3.SetText(L"N/A");  // Rename achievements button to N/A (achievements disabled)
 		GetChildById( L"XuiAbout", &m_button4 );
 		GetChildById( L"XuiQuit", &m_button5 );
 		GetChildById( L"XuiStorageDevice", &m_Storage );
@@ -581,7 +560,7 @@ public:
 		//GetChildById( L"XuiLogo", &m_Logo );
 		 
 		// Set version text dynamically
-		m_VersionText.SetText(L"Version 0.35 Beta");
+		m_VersionText.SetText(L"Version 0.37 Beta");
 	 
 		SetEffectValue( 20 );
 
@@ -793,8 +772,6 @@ VOID __cdecl main()
 
 	XuiSceneNavigateFirst( app.GetRootObj(), hMainScene, XUSER_INDEX_FOCUS );
   
-	//m_Achievements = new BYTE[XACHIEVEMENT_SIZE_FULL * ACHIEVEMENT_COUNT];  // Achievements disabled
-	//DoAchievo(ACHIEVEMENT_HOMEBREW_UNLOCKED);  // Achievements disabled
 
     while( TRUE ) {
 
@@ -851,113 +828,8 @@ VOID __cdecl main()
     }
 
     // Free resources, unregister custom classes, and exit.
-	//delete(m_Achievements);  // Achievements disabled
     app.Uninit();
     pDevice->Release();
 
 
 }
-
-
-//VOID EnumerateAchievements()  // Achievements disabled
-//{
-//    // Achievements disabled - function body commented out
-//    return;
-    /*  // All achievement code below is commented out
-
-// Annotation:
-// Reading an achievement will cause an MU access which is slow.  Therefore,
-// reading achievements is an asynchronous operation.  Creating an event to
-// signal the completion of the operation allows you to continue other
-// processing and rendering while the write takes place.
-
-    // Create event for asynchronous enumeration
-    HANDLE hEventComplete = CreateEvent( NULL, FALSE, FALSE, NULL );
- 
-    XOVERLAPPED xov;
-
-    ZeroMemory( &xov, sizeof(XOVERLAPPED) );
-    xov.hEvent = hEventComplete;
-
-    HANDLE hEnum;
-    DWORD cbBuffer;
-
-// Annotation:
-// This sample code retrieves the full details of an achievement.  The
-// dwDetailFlags (4th) parameter below can be used to control the actual
-// fields of each achievement that are filled in.  This can be helpful
-// when memory is at a premium and you don't need the image data (for
-// example).
-//
-// The two first two parameters control the title and the user 
-// making the request. The third is for the user
-// whose achievements are read. When the third parameter is set to
-// INVALID_XUID, the read is for the user's own achievements.
-
-    // Create enumerator for the default device
-    DWORD dwStatus = XUserCreateAchievementEnumerator(
-        0,                          // retrieve achievements for the current title
-        0,                          // local signed-in user 0 is making the request
-		INVALID_XUID ,               // achievements for the current user are to be found 
-        XACHIEVEMENT_DETAILS_ALL,   // information on all achievements is to be retrieved
-        0,                          // starting achievement index
-        ACHIEVEMENT_COUNT,          // number of achievements to return
-        &cbBuffer,             // bytes needed
-        &hEnum );
-
-    if( dwStatus != ERROR_SUCCESS )
-    {
-        CloseHandle( hEventComplete );
-         
-    }
-    
-
-    // Enumerate display names
-
-// Annotation
-// Once the enumerator is created it can be pumped for information.
-// The read is asynchronous so be sure to use that to your advantage
-// to keep your title responsive.
-
-    if( XEnumerate( hEnum, m_Achievements, sizeof( m_Achievements ),
-                    NULL, &xov ) == ERROR_IO_PENDING )
-    {
-        DWORD dwReturnCount;
-
-        // Wait on hEventComplete handle
-        if( XGetOverlappedResult( &xov, &dwReturnCount, TRUE ) == ERROR_SUCCESS )
-        {
-            dwAchievementCount = dwReturnCount;
-
-        }
-    }
-
-    CloseHandle( hEnum );
-    CloseHandle( hEventComplete );
-    */
-//}  // Achievements disabled
- 
-//void DoAchievo(DWORD AchievoID)  // Achievements disabled
-//{
-//	// Achievements disabled - function body commented out
-//	return;
-	/*  // All achievement code below is commented out
-
-	HANDLE hEventComplete = CreateEvent( NULL, FALSE, FALSE, FALSE, NULL );
-
-	XOVERLAPPED xov;
-
-    ZeroMemory( &xov, sizeof( XOVERLAPPED ) );
-    xov.hEvent = hEventComplete;
-
-	XUSER_ACHIEVEMENT Achievements;
-	Achievements.dwUserIndex = snesStoreage.GetSignedInUser();
-    Achievements.dwAchievementId = AchievoID;
-
-	XUserWriteAchievements( 1, &Achievements, &xov );
-
-	XGetOverlappedResult( &xov, NULL, TRUE );
-     
-    CloseHandle( hEventComplete );
-    */
-//}  // Achievements disabled

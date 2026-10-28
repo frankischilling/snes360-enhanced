@@ -48,7 +48,7 @@
 <Width>269.151978</Width>
 <Height>27.160034</Height>
 <Position>1053.147705,683.267151,0.000000</Position>
-<Text>Version 0.32 Beta</Text>
+<Text>Version 0.37 Beta</Text>
 <TextColor>0xff9beb0f</TextColor>
 <DropShadowColor>0xff000000</DropShadowColor>
 <PointSize>12.000000</PointSize>
@@ -120,23 +120,11 @@
 <Position>441.243286,291.831482,0.000000</Position>
 <Visual>btn_GenresNoIcon</Visual>
 <NavUp>XuiRoms</NavUp>
-<NavDown>XuiOptions</NavDown>
+<NavDown>XuiStorageDevice</NavDown>
 <Text>Favorites</Text>
 <PressPath>Favorites.xur</PressPath>
 </Properties>
 </XuiNavButton>
-<XuiButton>
-<Properties>
-<Id>XuiOptions</Id>
-<Width>467.288025</Width>
-<Height>43.617153</Height>
-<Position>441.243286,338.089478,0.000000</Position>
-<Visual>btn_GenresNoIcon</Visual>
-<NavUp>XuiFavorites</NavUp>
-<NavDown>XuiStorageDevice</NavDown>
-<Text>Achievements</Text>
-</Properties>
-</XuiButton>
 <XuiButton>
 <Properties>
 <Id>XuiStorageDevice</Id>
@@ -144,7 +132,7 @@
 <Height>44.339993</Height>
 <Position>441.243286,382.488525,0.000000</Position>
 <Visual>btn_GenresNoIcon</Visual>
-<NavUp>XuiOptions</NavUp>
+<NavUp>XuiFavorites</NavUp>
 <NavDown>XuiAbout</NavDown>
 <Text>Change Storage Device</Text>
 </Properties>

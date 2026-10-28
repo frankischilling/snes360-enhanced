@@ -377,7 +377,11 @@
 			/>
 			<Tool
 				Name="VCX360LinkerTool"
-				AdditionalOptions=" &quot;..\tinyxml\Release_LTCG\TinyXML.lib&quot; "
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				GenerateMapFile="true"
+				MapFileName="$(OutDir)\Snes360.map"
+				AdditionalOptions=" &quot;..\TinyXML\Release\TinyXML.lib&quot; "
 				AdditionalDependencies="d3d9.lib xgraphics.lib xapilib.lib xaudio2.lib x3daudio.lib xmcore.lib xboxkrnl.lib xbdm.lib xact3.lib xuirun.lib xuirender.lib xmedia2.lib xuivideo.lib xnet.lib xuihtml.lib xonline.lib xmp.lib"
 				OutputFile="snes9x.exe"
 				LinkIncremental="1"
@@ -392,7 +396,6 @@
 			<Tool
 				Name="VCX360ImageTool"
 				ProjectDefaults="xex.xml"
-				AdditionalSections="FFED0707=$(OutDir)\spa.bin"
 			/>
 			<Tool
 				Name="VCBscMakeTool"
@@ -586,7 +589,6 @@
 				OutputFileName="$(OutDir)\$(ProjectName).xex"
 				ProjectDefaults="xex.xml"
 				TitleID=""
-				AdditionalSections="FFED0707=$(OutDir)\spa.bin"
 			/>
 			<Tool
 				Name="VCBscMakeTool"
@@ -4287,34 +4289,6 @@
 			Name="Xbox"
 			>
 			<File
-				RelativePath=".\Achievements.spa.h"
-				>
-				<FileConfiguration
-					Name="Release|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="C core|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath=".\GeneralFunctions.cpp"
 				>
 			</File>
@@ -4377,38 +4351,6 @@
 			<File
 				RelativePath=".\FavoritesList.h"
 				>
-			</File>
-			<File
-				RelativePath=".\Snes 360.spa.h"
-				>
-			</File>
-			<File
-				RelativePath=".\Snes 360.xlast"
-				>
-				<FileConfiguration
-					Name="Release|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="C core|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\Storage.cpp"

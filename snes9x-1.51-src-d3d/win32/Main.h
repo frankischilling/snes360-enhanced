@@ -6,7 +6,6 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-void UpdatePresence(DWORD type);
 
 class CSnes360App : public CXuiModule
 {

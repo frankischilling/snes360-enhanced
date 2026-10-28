@@ -174,9 +174,6 @@
 #define STRICT
 #endif
 #include <xtl.h>
-//#include "Achievements.spa.h"  // Achievements disabled
-//extern void DoAchievo(DWORD AcheivoID);  // Achievements disabled
-extern void UpdatePresence(char *name);
 #ifndef __BORLANDC__
 
 #ifndef __MINGW32__

@@ -4285,34 +4285,6 @@
 			Name="Xbox"
 			>
 			<File
-				RelativePath=".\Achievements.spa.h"
-				>
-				<FileConfiguration
-					Name="Release|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="C core|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath=".\GeneralFunctions.cpp"
 				>
 			</File>
@@ -4375,38 +4347,6 @@
 			<File
 				RelativePath=".\FavoritesList.h"
 				>
-			</File>
-			<File
-				RelativePath=".\Snes 360.spa.h"
-				>
-			</File>
-			<File
-				RelativePath=".\Snes 360.xlast"
-				>
-				<FileConfiguration
-					Name="Release|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="C core|Xbox 360"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\Storage.cpp"

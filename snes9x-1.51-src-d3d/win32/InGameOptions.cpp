@@ -43,7 +43,6 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 			const WCHAR * button_text = L"OK";
 			FreezeUnfreeze(0,false);
 			ShowMessageBoxEx(NULL,NULL,L"Snes360 - Load State", L"Loaded state successfully", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 			 
-			//DoAchievo(ACHIEVEMENT_CHEAT);  // Achievements disabled
 			bHandled = TRUE;
 			return S_OK;			
 
