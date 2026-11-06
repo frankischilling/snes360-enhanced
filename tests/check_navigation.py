@@ -22,9 +22,12 @@ for props in options.values():
         target = props.findtext(direction)
         if target:
             assert target.split("\\")[-1] in options, (direction, target)
+assert options["XuiFPS"].findtext("NavRight") == "XuiMultitap"
+assert options["XuiMultitap"].findtext("NavLeft") == "XuiFPS"
+assert options["XuiMultitap"].findtext("NavDown") == "XuiButtonReset"
 for scene in ("FavoritesListScene.xui", "Favorites.xui"):
     favorite = controls(scene)
     assert favorite["XuiRemoveFavorite"].findtext("NavRight") == "XuiMainMenu"
     assert favorite["XuiMainMenu"].findtext("NavLeft") == "XuiRemoveFavorite"
     assert favorite["XuiPlay"].findtext("NavRight") == "XuiRemoveFavorite"
-print("UI navigation checks passed: FPS is in the vertical chain; Favorites removal is reachable.")
+print("UI navigation checks passed: FPS, multitap, Reset Game and Favorites removal are reachable.")

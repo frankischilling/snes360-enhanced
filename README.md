@@ -5,7 +5,7 @@ Direct3D 9 and HLSL shaders for video, XAudio2 for audio, Xbox 360 controllers,
 and XUI scenes for the interface. The changes focus on the Xbox 360 front end
 and build support. The SNES emulation core comes from Snes9x.
 
-Current version: 0.38 Beta.
+Current version: 0.39 Beta.
 
 Achievements are removed. The source has no achievement handlers, triggers,
 generated headers, or SPA data. The XEX image settings do not embed a SPA
@@ -50,8 +50,31 @@ These screenshots show earlier versions of the interface.
 The ROM-search and Game Genie keyboards use asynchronous requests checked each
 frame so the interface can keep updating while the keyboard is open.
 
+## Multitap co-op
+
+Start a game and press both thumbsticks to open the in-game menu. Enable
+**Multitap (3 / 4 players)**; press right from Display FPS to reach the checkbox.
+The choice is saved per ROM in `settings.xml`. If extra players do not appear,
+save your progress and select **Reset Game**. Some games check for the adapter
+only when they start. Reset Game restarts play.
+
+Xbox controller slots 1, 2, 3 and 4 become SNES players 1, 2, 3 and 4. The first
+player uses SNES port one. Players two through four use the adapter on port
+two; its fifth-player socket is disconnected. Reconnecting a controller in the
+same Xbox slot keeps its player number. Turn the checkbox off for two-player
+games if they do not work with the adapter connected.
+
+Each ROM path has its own saved choice, so changing one game does not change
+another. Existing ROM controller metadata supplies the default until you save
+a choice. Moving or renaming a ROM gives it a new settings entry. Keep your
+`settings.xml` when updating. If saving fails, the menu reports an error and
+keeps the active mode. Loading a state reapplies the selected controller layout.
+Games must support multitap to use extra players.
+
 ## Changes by version
 
+- 0.39 Beta adds per-game multitap selection for three or four players, repairs
+  adapter bounds and serial counters, and connects the Reset Game button.
 - 0.38 Beta adds Favorites removal, brings Game Genie input to the ROM browser,
   repairs FPS checkbox navigation, and fixes a long-title buffer overflow.
 - 0.37 Beta removes the remaining achievement code, metadata, and menu entry.
@@ -65,7 +88,7 @@ frame so the interface can keep updating while the keyboard is open.
 
 Earlier build fixes added a standalone CRC32 implementation, C89-compatible
 variable declarations, and Xbox 360 project definitions. More details for the
-current release are in [the release notes](docs/release-0.38.md).
+current release are in [the release notes](docs/release-0.39.md).
 
 ## Install or update
 
@@ -120,6 +143,8 @@ settings and favorites. ROMs and personal data are not included in releases.
 | In game | LB, RB | SNES shoulder buttons |
 | In game | Start, Back | SNES Start and Select |
 | In game | Press both thumbsticks | Open the in-game menu |
+| In-game menu | Multitap (3 / 4 players) | Save the controller mode for this ROM |
+| In-game menu | Reset Game | Restart play with the selected controller mode |
 
 Other mappings can depend on the port configuration. Use the in-game menu for
 preview capture and display options.
@@ -206,16 +231,19 @@ the required package files, and the XZP for old achievement strings.
 Pass `--map "snes9x-1.51-src-d3d/win32/Xbox 360/Release/Snes360.map"` to check
 that the linker discarded achievement functions from the SDK as well.
 
-Run `python tests/check_navigation.py` to check the FPS and Favorites navigation
-paths. CI also compiles the shared launch code and favorites persistence code
-with SDK substitutes, then runs component tests under address and undefined
-behavior sanitizers. These tests cover 6,000-entry selection, long titles,
-filtering, keyboard completion and errors, cancellation, and saved favorites.
-The compiler commands are in `.github/workflows/source-audit.yml`.
+Run `python tests/check_navigation.py` to check the FPS, multitap, reset and
+Favorites navigation paths. Run `bash tools/test-components.sh` on Linux or
+through WSL to compile and run the frontend, settings and controller tests
+with address and undefined behavior sanitizers. The controller test uses the
+production core for four-pad routing, both adapter banks, device detection,
+serial and automatic reads, disconnects and mode changes. Settings tests check
+per-ROM choices, XML preservation and failed writes. The frontend tests cover
+large lists, long titles, filtering and keyboard requests. CI runs these same
+checks.
 
-The 0.38 release is compiled with Visual Studio 2008 SP1 and XDK 2.0.9328.0.
+The 0.39 release is compiled with Visual Studio 2008 SP1 and XDK 2.0.9328.0.
 Build and package inspection do not establish console runtime behavior.
-Console launch, menu navigation, and gameplay still need hardware testing.
+Console launch, menu navigation and co-op gameplay still need hardware testing.
 
 ## Troubleshooting
 

@@ -35,6 +35,9 @@ struct XOVERLAPPED { HANDLE hEvent; };
 #define GENERIC_WRITE 2
 #define OPEN_EXISTING 3
 #define CREATE_ALWAYS 4
+#define CREATE_NEW 5
+#define MOVEFILE_REPLACE_EXISTING 1
+#define MOVEFILE_WRITE_THROUGH 8
 #define FILE_ATTRIBUTE_NORMAL 0
 #define ERROR_FILE_NOT_FOUND 2
 HANDLE CreateFile(const char*, DWORD, DWORD, void*, DWORD, DWORD, HANDLE);
@@ -45,6 +48,8 @@ BOOL DeleteFile(const char*);
 DWORD GetLastError();
 HANDLE CreateEvent(void*, BOOL, BOOL, const char*);
 BOOL CloseHandle(HANDLE);
+BOOL FlushFileBuffers(HANDLE);
+BOOL MoveFileEx(const char*, const char*, DWORD);
 DWORD XCancelOverlapped(XOVERLAPPED*);
 DWORD XGetOverlappedResult(XOVERLAPPED*, DWORD*, BOOL);
 DWORD WaitForSingleObject(HANDLE, DWORD);

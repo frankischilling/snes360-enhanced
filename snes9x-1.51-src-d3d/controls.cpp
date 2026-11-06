@@ -450,6 +450,8 @@ void S9xControlsSoftReset(void){
         }
     }
     FLAG_LATCH=false;
+    curcontrollers[0]=newcontrollers[0];
+    curcontrollers[1]=newcontrollers[1];
 }
 
 void S9xUnmapAllControls(void){
@@ -2142,7 +2144,8 @@ void S9xSetJoypadLatch(bool latch){
             }
             switch(i=curcontrollers[n]){
               case MP5:
-                for(j=0, i=mp5[n].pads[j]; j<4; i=mp5[n].pads[++j]){
+                for(j=0; j<4; j++){
+                    i=mp5[n].pads[j];
                     if(i==NONE) continue;
                     do_polling(i);
                 }
@@ -2216,7 +2219,8 @@ uint8 S9xReadJOYSERn(int n){
     } else {
         switch(i=curcontrollers[n]){
           case MP5:
-            r=read_idx[n][FLAG_IOBIT(n)?0:1]++;
+            r=read_idx[n][FLAG_IOBIT(n)?0:1];
+            if(r<255) read_idx[n][FLAG_IOBIT(n)?0:1]++;
             j=FLAG_IOBIT(n)?0:2;
             for(i=0; i<2; i++, j++){
                 if(mp5[n].pads[j]==NONE) continue;
@@ -2344,7 +2348,8 @@ void S9xControlEOF(void){
     for(n=0; n<2; n++){
         switch(i=curcontrollers[n]){
           case MP5:
-            for(j=0, i=mp5[n].pads[j]; j<4; i=mp5[n].pads[++j]){
+            for(j=0; j<4; j++){
+                i=mp5[n].pads[j];
                 if(i==NONE) continue;
                 if(++joypad[i-JOYPAD0].turbo_ct>=turbo_time){
                     joypad[i-JOYPAD0].turbo_ct=0;

@@ -5,6 +5,11 @@
 #include "InGameOptions.h"
 #include "Storage.h"
 #include "screenshot.h"
+#include "memmap.h"
+#include "controls.h"
+#include "RomSettings.h"
+extern CRomPathSettings romPaths;
+extern void ChangeInputDevice(void);
 
 
 extern BOOL IsCurrentlyInGame;
@@ -42,6 +47,8 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 		{
 			const WCHAR * button_text = L"OK";
 			FreezeUnfreeze(0,false);
+            // States may contain adapter pad IDs from another controller layout.
+            ChangeInputDevice();
 			ShowMessageBoxEx(NULL,NULL,L"Snes360 - Load State", L"Loaded state successfully", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL); 			 
 			bHandled = TRUE;
 			return S_OK;			
@@ -49,6 +56,37 @@ HRESULT CInGameOptions::OnNotifyPress( HXUIOBJ hObjPressed,
 
 		}
  
+        else if (hObjPressed == m_ResetGame)
+        {
+            S9xReset();
+            Settings.Paused = false;
+            Settings.ForcedPause = false;
+            Settings.FrameAdvance = false;
+            S9xSetSoundMute(FALSE);
+            bHandled = TRUE;
+            return S_OK;
+        }
+        else if (hObjPressed == m_Multitap)
+        {
+            const bool enabled = m_Multitap.IsChecked() != 0;
+            if (romPaths.SetMultitapMode(Memory.ROMFilename, enabled))
+            {
+                GUI.ControllerOption = enabled ? SNES_MULTIPLAYER5 : SNES_JOYPAD;
+                ChangeInputDevice();
+                S9xControlsSoftReset();
+            }
+            else
+            {
+                m_Multitap.SetCheck(GUI.ControllerOption == SNES_MULTIPLAYER5 ||
+                                    GUI.ControllerOption == SNES_MULTIPLAYER8);
+                const WCHAR *button = L"OK";
+                ShowMessageBoxEx(NULL, NULL, L"Controller settings",
+                    L"Could not save settings.xml. Check that the application folder is writable.",
+                    1, (LPCWSTR*)&button, NULL, XUI_MB_CENTER_ON_PARENT, NULL);
+            }
+            bHandled = TRUE;
+            return S_OK;
+        }
 		else if ( hObjPressed == m_TVMode )
 		{
 
@@ -239,6 +277,8 @@ HRESULT CInGameOptions::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
         // Retrieve controls for later use.
         GetChildById( L"XuiSaveStateButton", &m_SaveState );
         GetChildById( L"XuiLoadStateButton", &m_LoadState );
+        GetChildById( L"XuiButtonReset", &m_ResetGame );
+        GetChildById( L"XuiMultitap", &m_Multitap );
         GetChildById( L"XuiFilterSimple2x", &m_Simple2x );		 
 		GetChildById( L"XuiFilterScanlines", &m_Scanlines );
 		GetChildById( L"XuiFilterTVMode", &m_TVMode );	 		 
@@ -284,6 +324,8 @@ HRESULT CInGameOptions::OnInit( XUIMessageInit* pInitData, BOOL& bHandled )
 		}
 
 		m_FPSDisplay.SetCheck(Settings.DisplayFrameRate != 0);
+        m_Multitap.SetCheck(GUI.ControllerOption == SNES_MULTIPLAYER5 ||
+                            GUI.ControllerOption == SNES_MULTIPLAYER8);
 
 		switch(Settings.Filter)
 		{
@@ -353,6 +395,8 @@ VOID   CInGameOptions::SetEffectValue( INT nValue )
 
 HRESULT CInGameOptions::OnInGameMenu( int iVal1,  BOOL& bHandled )
 { 
+    m_Multitap.SetCheck(GUI.ControllerOption == SNES_MULTIPLAYER5 ||
+                        GUI.ControllerOption == SNES_MULTIPLAYER8);
 	DeleteFile("cache:\\preview.png");
 
 	if (S9xDoScreenshot(256, 224, "cache:\\preview.png"))

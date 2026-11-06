@@ -40,6 +40,10 @@ public:
 	bool SaveFavorites();
 	bool Save(const string & sXmlPath);
 	
+	// -1 keeps the ROM header default; 0 uses two pads; 1 enables multitap.
+	int GetMultitapMode(const string & romPath) const;
+	bool SetMultitapMode(const string & romPath, bool enabled);
+
 	// Game Genie toggle
 	bool IsGameGenieEnabled() const { return m_GameGenieEnabled; }
 	void SetGameGenieEnabled(bool enabled) { m_GameGenieEnabled = enabled; }
@@ -55,6 +59,7 @@ private:
 	set<string> m_Favorites;
 	string m_sXmlPath;
 	bool m_GameGenieEnabled;
+	map<string, bool> m_MultitapModes;
 	
 public:
 	string m_PreviewPath;
