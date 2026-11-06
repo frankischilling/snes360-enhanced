@@ -18,6 +18,13 @@
 	}
 	
 
+static string ControllerPathKey(string path)
+{
+    for (size_t i = 0; i < path.size(); ++i)
+        if (path[i] >= 'A' && path[i] <= 'Z') path[i] += 'a' - 'A';
+    return path;
+}
+
 CRomPathSettings::CRomPathSettings() : m_bLoaded(false), m_GameGenieEnabled(false)
 {
 }
@@ -30,6 +37,7 @@ bool CRomPathSettings::Load(const string & sXmlPath)
 {	
 	m_sXmlPath = sXmlPath;
 	m_Favorites.clear();
+	m_MultitapModes.clear();
 	
 	if (!m_XmlDoc.LoadFile(sXmlPath.c_str()))
 	{
@@ -80,6 +88,15 @@ bool CRomPathSettings::Load(const string & sXmlPath)
 	else
 	{
 		m_GameGenieEnabled = false;  // Default to false if not specified
+	}
+
+	for (element = root.FirstChildElement("ControllerMode").Element(); element;
+	     element = element->NextSiblingElement("ControllerMode"))
+	{
+		const char *path = element->Attribute("Path");
+		const char *mode = element->Attribute("Multitap");
+		if (path && *path && mode && (!strcmp(mode, "true") || !strcmp(mode, "false")))
+			m_MultitapModes[ControllerPathKey(path)] = !strcmp(mode, "true");
 	}
 
 	// Load favorites from text file (not from XML)
@@ -245,6 +262,62 @@ set<string> CRomPathSettings::GetFavorites() const
 	return m_Favorites;
 }
 
+int CRomPathSettings::GetMultitapMode(const string & romPath) const
+{
+    map<string, bool>::const_iterator it = m_MultitapModes.find(ControllerPathKey(romPath));
+    return it == m_MultitapModes.end() ? -1 : (it->second ? 1 : 0);
+}
+
+bool CRomPathSettings::SetMultitapMode(const string & romPath, bool enabled)
+{
+    if (romPath.empty() || m_sXmlPath.empty()) return false;
+    TiXmlDocument doc(m_XmlDoc);
+    TiXmlElement *root = doc.FirstChildElement("Settings");
+    if (!root) return false;
+    map<string, bool> previous = m_MultitapModes;
+    m_MultitapModes[ControllerPathKey(romPath)] = enabled;
+    TiXmlElement *element = root->FirstChildElement("ControllerMode");
+    while (element)
+    {
+        TiXmlElement *next = element->NextSiblingElement("ControllerMode");
+        root->RemoveChild(element);
+        element = next;
+    }
+    for (map<string, bool>::const_iterator it = m_MultitapModes.begin(); it != m_MultitapModes.end(); ++it)
+    {
+        TiXmlElement *mode = new TiXmlElement("ControllerMode");
+        mode->SetAttribute("Path", it->first.c_str());
+        mode->SetAttribute("Multitap", it->second ? "true" : "false");
+        root->LinkEndChild(mode);
+    }
+    // Replace settings only after the complete temporary file reaches storage.
+    const string temporary = m_sXmlPath + ".controllers.tmp";
+    HANDLE file = CreateFile(temporary.c_str(), GENERIC_WRITE, 0, NULL,
+                             CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        m_MultitapModes = previous;
+        return false;
+    }
+    TiXmlPrinter printer;
+    doc.Accept(&printer);
+    DWORD written = 0;
+    bool saved = WriteFile(file, printer.CStr(), printer.Size(), &written, NULL) != FALSE;
+    saved = saved && written == printer.Size() && FlushFileBuffers(file) != FALSE;
+    if (!CloseHandle(file)) saved = false;
+    if (saved)
+        saved = MoveFileEx(temporary.c_str(), m_sXmlPath.c_str(),
+                           MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE;
+    if (!saved)
+    {
+        DeleteFile(temporary.c_str());
+        m_MultitapModes = previous;
+        return false;
+    }
+    m_XmlDoc = doc;
+    return true;
+}
+
 bool CRomPathSettings::Save(const string & sXmlPath)
 {
 	string pathToUse;
@@ -300,6 +373,14 @@ bool CRomPathSettings::Save(const string & sXmlPath)
 	gameGenieEnabled->LinkEndChild( gameGenieText );
 	root->LinkEndChild( gameGenieEnabled );
 	
+	for (map<string, bool>::const_iterator it = m_MultitapModes.begin(); it != m_MultitapModes.end(); ++it)
+	{
+		TiXmlElement *mode = new TiXmlElement("ControllerMode");
+		mode->SetAttribute("Path", it->first.c_str());
+		mode->SetAttribute("Multitap", it->second ? "true" : "false");
+		root->LinkEndChild(mode);
+	}
+
 	// Note: Favorites are now saved to a separate text file, not in XML
 	// So we don't add them to the XML document
 	

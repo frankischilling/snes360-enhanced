@@ -4305,6 +4305,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\XboxJoypads.h"
+				>
+			</File>
+			<File
 				RelativePath=".\KernelDefines.h"
 				>
 			</File>

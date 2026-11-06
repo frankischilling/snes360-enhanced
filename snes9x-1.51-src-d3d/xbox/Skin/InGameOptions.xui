@@ -348,12 +348,35 @@
 <Height>47.880051</Height>
 <Position>131.726776,227.363953,0.000000</Position>
 <NavLeft>XuiSaveStateButton</NavLeft>
-<NavRight>XuiButtonReset</NavRight>
+<NavRight>XuiMultitap</NavRight>
 <NavUp>XuiAspectRatio</NavUp>
 <NavDown>XuiRadioGroup1\XuiFilterSimple2x</NavDown>
 <Text>Display FPS</Text>
 </Properties>
 </XuiCheckbox>
+<XuiCheckbox>
+<Properties>
+<Id>XuiMultitap</Id>
+<Width>470.000000</Width>
+<Height>47.880051</Height>
+<Position>690.000000,227.363953,0.000000</Position>
+<NavLeft>XuiFPS</NavLeft>
+<NavRight>XuiFPS</NavRight>
+<NavUp>XuiPointFiltering</NavUp>
+<NavDown>XuiButtonReset</NavDown>
+<Text>Multitap (3 / 4 players)</Text>
+</Properties>
+</XuiCheckbox>
+<XuiText>
+<Properties>
+<Id>XuiMultitapHelp</Id>
+<Width>490.000000</Width>
+<Height>45.000000</Height>
+<Position>696.000000,277.000000,0.000000</Position>
+<Text>Saved per game. Reset Game if players do not appear.</Text>
+<PointSize>16.000000</PointSize>
+</Properties>
+</XuiText>
 <XuiTextureEffect>
 <Properties>
 <Id>XuiTextureEffect1</Id>

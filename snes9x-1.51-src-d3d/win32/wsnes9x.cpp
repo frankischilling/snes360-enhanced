@@ -194,6 +194,9 @@
 #include "../apu.h"
 #include "../movie.h"
 #include "../controls.h"
+#include "XboxJoypads.h"
+#include "RomSettings.h"
+extern CRomPathSettings romPaths;
 #include "../conffile.h"
 #include "../soundux.h"
 #include "AVIOutput.h"
@@ -766,8 +769,7 @@ void ChangeInputDevice(void)
 		break;
 	case SNES_MULTIPLAYER5:
 		Settings.MultiPlayer5Master = true;
-		S9xSetController(0, CTL_JOYPAD,     0, 0, 0, 0);
-		S9xSetController(1, CTL_MP5,        1, 2, 3, 4);
+		SetXboxJoypadPorts(true);
 		//CheckMenuItem(GUI.hMenu, IDM_ENABLE_MULTITAP, MFS_CHECKED);
 		break;
 	case SNES_MULTIPLAYER8:
@@ -790,8 +792,7 @@ void ChangeInputDevice(void)
 		break;
 	default:
 	case SNES_JOYPAD:
-		S9xSetController(0, CTL_JOYPAD,     0, 0, 0, 0);
-		S9xSetController(1, CTL_JOYPAD,     1, 0, 0, 0);
+		SetXboxJoypadPorts(false);
 		//CheckMenuItem(GUI.hMenu, IDM_SNES_JOYPAD, MFS_CHECKED);
 		break;
 	}
@@ -3139,6 +3140,7 @@ int RunEmulation(char *path, char *RomName)
 	S9xCustomDisplayString = WinDisplayString;
 	Direct3D.initialize(pDevice); 
     GUI.ControlForced = 0xff;
+    GUI.ControllerOption = SNES_JOYPAD;
 	GUI.FullScreen = true; 
  
  
@@ -5576,6 +5578,11 @@ void S9xPostRomInit()
 					break;
 			}
 		}
+
+		// A saved per-game choice takes precedence over the ROM header.
+		int multitapMode = romPaths.GetMultitapMode(Memory.ROMFilename);
+		if (multitapMode >= 0)
+			GUI.ControllerOption = multitapMode ? SNES_MULTIPLAYER5 : SNES_JOYPAD;
 
 		// update menu and remember what (if anything) the control was forced from
 		ChangeInputDevice();

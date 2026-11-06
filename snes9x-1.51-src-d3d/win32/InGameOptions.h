@@ -52,6 +52,7 @@ protected:
     // Control and Element wrapper objects.
     CXuiControl m_SaveState;
     CXuiControl m_LoadState;
+    CXuiControl m_ResetGame;
 
 	CXuiControl m_AdjustScreen;
 
@@ -76,6 +77,7 @@ protected:
 	CXuiCheckbox m_PointFiltering;
 	CXuiCheckbox m_MuteAudio;
 	CXuiCheckbox m_FPSDisplay;
+	CXuiCheckbox m_Multitap;
 
 	CXuiRadioGroup m_FilterGroup;
 
