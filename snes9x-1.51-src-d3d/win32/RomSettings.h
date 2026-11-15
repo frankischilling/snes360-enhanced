@@ -53,6 +53,7 @@ public:
 	DEFINE_XML_PROP(DefaultFontName)
 
 private:
+	void ResetPaths();
 	TiXmlDocument m_XmlDoc;
 	bool m_bLoaded;
 	map<string, string> m_DeviceMap;

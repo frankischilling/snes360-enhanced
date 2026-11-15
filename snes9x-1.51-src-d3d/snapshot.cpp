@@ -935,7 +935,7 @@ bool8 S9xFreezeGame (const char *filename)
 	wchar_t romName[50];
 	swprintf_s(romName, L"%S", Memory.ROMName);
  
-	hEventComplete = CreateEvent( NULL, FALSE, FALSE, NULL );
+	hEventComplete = CreateEvent( NULL, TRUE, FALSE, NULL );
 	
 	xov.hEvent = hEventComplete;
 	HANDLE stream = snesStoreage.OpenStream(filename, romName, &xov, &hEventComplete);
@@ -973,6 +973,7 @@ bool8 S9xFreezeGame (const char *filename)
 
 		return (TRUE);
     }
+    if (hEventComplete) CloseHandle(hEventComplete);
     return (FALSE);
 }
 
@@ -1002,7 +1003,7 @@ bool8 S9xUnfreezeGame (const char *filename)
 
 	swprintf_s(romName, L"%S", Memory.ROMName);
  
-	hEventComplete = CreateEvent( NULL, FALSE, FALSE, NULL );
+	hEventComplete = CreateEvent( NULL, TRUE, FALSE, NULL );
 	xov.hEvent = hEventComplete;
 	HANDLE snapshot = snesStoreage.OpenStreamForRead(filename, romName, &xov, &hEventComplete);
 
@@ -1065,6 +1066,7 @@ bool8 S9xUnfreezeGame (const char *filename)
 		return (TRUE);
     }
 
+	if (hEventComplete) CloseHandle(hEventComplete);
 	// failed; error message:
 	{
 		char name [PATH_MAX];

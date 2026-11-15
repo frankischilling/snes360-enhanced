@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "Storage.h"
+#include "StorageStream.h"
 
 
 HRESULT GameStorage::Initialise()
@@ -288,174 +289,47 @@ VOID GameStorage::SetDefaultDevice()
 // Name: WriteSaveGame
 //  
 //--------------------------------------------------------------------------------------
-DWORD GameStorage::WriteSaveGame( CONST CHAR *szFileName, CONST WCHAR* szDisplayName, CHAR *szBuffer, DWORD bytesToWrite )
- {
-    // Create event for asynchronous writing
-    HANDLE hEventComplete = CreateEvent( NULL, FALSE, FALSE, NULL );
-
-   
-    XOVERLAPPED xov = {0};
-    xov.hEvent = hEventComplete;
-
-    XCONTENT_DATA contentData = {0};
-    strcpy_s( contentData.szFileName, szFileName );
-    wcscpy_s( contentData.szDisplayName, szDisplayName );
-    contentData.dwContentType = XCONTENTTYPE_SAVEDGAME;
-    contentData.DeviceID = m_DeviceID;
-
-    // Mount the device associated with the display name for writing
-    DWORD dwErr = XContentCreate( GetSignedInUser(), g_szSaveRoot, &contentData,
-                        XCONTENTFLAG_CREATEALWAYS, NULL, NULL, &xov );
-    if( dwErr != ERROR_IO_PENDING )
- {
-        CloseHandle( hEventComplete );
-        
-        return dwErr;
-    }
-
-    // Wait on hEventComplete handle
-    if( XGetOverlappedResult( &xov, NULL, TRUE ) == ERROR_SUCCESS )
- {
-        HANDLE hFile = CreateFile( g_szSaveGame, GENERIC_WRITE, 0,
-            NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
-
-        if( hFile != INVALID_HANDLE_VALUE )
- {
-    // Write dummy data to the file
-            
-            DWORD dwWritten;
-
-            if( WriteFile( hFile, ( VOID* )szBuffer, bytesToWrite, &dwWritten, NULL ) == 0 )
-			{
-                CloseHandle( hFile );
-                XContentClose( g_szSaveRoot, &xov );
-                XGetOverlappedResult( &xov, NULL, TRUE );
-                CloseHandle( hEventComplete );
-
-            
-                return GetLastError();
-            }
-
-            CloseHandle( hFile );
-        }
-        else
-		{
-          
-            return GetLastError();
-        }
-    }
-
-    XContentClose( g_szSaveRoot, &xov );
-
-    // Wait for XCloseContent to complete
-    XGetOverlappedResult( &xov, NULL, TRUE );
-
-    CloseHandle( hEventComplete );
-
-    return ERROR_SUCCESS;
+DWORD GameStorage::WriteSaveGame(CONST CHAR* szFileName, CONST WCHAR* szDisplayName, CHAR* szBuffer, DWORD bytesToWrite)
+{
+    XCONTENT_DATA content = {0};
+    strcpy_s(content.szFileName, szFileName);
+    wcscpy_s(content.szDisplayName, szDisplayName);
+    content.dwContentType = XCONTENTTYPE_SAVEDGAME;
+    content.DeviceID = m_DeviceID;
+    DWORD written = 0;
+    return TransferSaveContent(GetSignedInUser(), &content, g_szSaveRoot,
+        g_szSaveGame, szBuffer, bytesToWrite, false, &written);
 }
 
 
 HANDLE GameStorage::OpenStream(CONST CHAR* szFileName, CONST WCHAR* szDisplayName, XOVERLAPPED *xov, HANDLE *hEventComplete)
 {
-	HANDLE hFile = NULL;
- 
-    XCONTENT_DATA contentData = {0};
-    strcpy_s( contentData.szFileName, szFileName );
-    wcscpy_s( contentData.szDisplayName, szDisplayName );
-    contentData.dwContentType = XCONTENTTYPE_SAVEDGAME;
-    contentData.DeviceID = m_DeviceID;
-
-    // Mount the device associated with the display name for writing
-    DWORD dwErr = XContentCreate( GetSignedInUser(), g_szSaveRoot, &contentData,
-                        XCONTENTFLAG_CREATEALWAYS, NULL, NULL, xov );
-    if( dwErr != ERROR_IO_PENDING )
-	{
-        CloseHandle( hEventComplete );
-        
-        return NULL;
-    }
-
-    // Wait on hEventComplete handle
-    if( XGetOverlappedResult( xov, NULL, TRUE ) == ERROR_SUCCESS )
-	{
-         hFile = CreateFile( g_szSaveGame, GENERIC_WRITE , 0,
-            NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
-
-		  
-	}
-
-	return hFile;
- 
+    return OpenContentStream(GetSignedInUser(), m_DeviceID, szFileName,
+        szDisplayName, g_szSaveRoot, g_szSaveGame, false, xov);
 }
 
 
 HANDLE GameStorage::OpenStreamForRead(CONST CHAR* szFileName, CONST WCHAR* szDisplayName, XOVERLAPPED *xov, HANDLE *hEventComplete)
 {
-	HANDLE hFile = NULL;
- 
-    XCONTENT_DATA contentData = {0};
-    strcpy_s( contentData.szFileName, szFileName );
-    wcscpy_s( contentData.szDisplayName, szDisplayName );
-    contentData.dwContentType = XCONTENTTYPE_SAVEDGAME;
-    contentData.DeviceID = m_DeviceID;
-
-    // Mount the device for reading
-    DWORD dwErr = XContentCreate( GetSignedInUser(), g_szSaveRoot, &contentData,
-                                  XCONTENTFLAG_OPENEXISTING, NULL, NULL, xov );
-    if( dwErr != ERROR_IO_PENDING )
-	{
-        CloseHandle( hEventComplete );
-        
-        return NULL;
-    }
-
-    // Wait on hEventComplete handle
-    if( XGetOverlappedResult( xov, NULL, TRUE ) == ERROR_SUCCESS )
-	{
-          hFile = CreateFile( g_szSaveGame, GENERIC_READ,
-                                   FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL );
-
-		  
-	}
-
-	return hFile;
- 
+    return OpenContentStream(GetSignedInUser(), m_DeviceID, szFileName,
+        szDisplayName, g_szSaveRoot, g_szSaveGame, true, xov);
 }
 
 DWORD  GameStorage::WriteStream(HANDLE hFile, CHAR *szBuffer, DWORD bytesToWrite )
 {
-
-	DWORD dwWritten = 0;
-
-	if( WriteFile( hFile, ( VOID* )szBuffer, bytesToWrite, &dwWritten, NULL ) == 0 )
-	{
-		return GetLastError();
-	}
-
-	return dwWritten;
-
+    return WriteStorageStream(hFile, szBuffer, bytesToWrite);
 }
 
 DWORD GameStorage::ReadStream(HANDLE hFile, CHAR *szBuffer, DWORD bytesToRead)
 {
-	DWORD dwRead = 0;
-
-	if (ReadFile(hFile, (VOID *)szBuffer, bytesToRead, &dwRead, NULL) == 0)
-	{
-		return GetLastError();
-	}
-
-	return dwRead;
-
+    return ReadStorageStream(hFile, szBuffer, bytesToRead);
 }
 
 VOID  GameStorage::CloseStream(HANDLE hFile, XOVERLAPPED *xov)
 {
 
-	CloseHandle( hFile );	
-    XContentClose( g_szSaveRoot, xov );     
-    XGetOverlappedResult( xov, NULL, TRUE );
+    CloseHandle(hFile);
+    CloseContentStreamMount(g_szSaveRoot, xov);
     
 }
 
@@ -497,77 +371,10 @@ VOID GameStorage::EnumerateContentNames()
 // Name: ReadSaveGame
 // Desc: Read the previously saved dummy game file.
 //--------------------------------------------------------------------------------------
-DWORD GameStorage::ReadSaveGame( XCONTENT_DATA* ContentData, char *szBuffer, DWORD bytesToRead, DWORD *bytesRead )
+DWORD GameStorage::ReadSaveGame(XCONTENT_DATA* content, char* buffer, DWORD bytesToRead, DWORD* bytesRead)
 {
-    // Create event for asynchronous reading
-    HANDLE hEventComplete = CreateEvent( NULL, FALSE, FALSE, NULL );
-
-   
-    XOVERLAPPED xov = {0};
-    xov.hEvent = hEventComplete;
-
-    // Mount the device for reading
-    DWORD dwErr = XContentCreate( GetSignedInUser(), g_szSaveRoot, ContentData,
-                                  XCONTENTFLAG_OPENEXISTING, NULL, NULL, &xov );
-    if( dwErr != ERROR_IO_PENDING )
-    {
-        CloseHandle( hEventComplete );
-      
-        return dwErr;
-    }
-
-    dwErr = XGetOverlappedResult( &xov, NULL, TRUE );
-    if( dwErr == ERROR_SUCCESS )
-    {
-        HANDLE hFile = CreateFile( g_szSaveGame, GENERIC_READ,
-                                   FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL );
-
-        if( hFile != INVALID_HANDLE_VALUE )
-        {
-            //
-            // Read some data from the file
-            // Note, that when using XCONTENTFLAG_OPENEXISTING in XContentCreate, only
-            // reading is allowed from the file, writing will have no effect.
-            //
-         
-            DWORD dwRead;
-
-            if( ReadFile( hFile, ( VOID* )szBuffer, bytesToRead, &dwRead, NULL ) == 0 )
-            {
-                CloseHandle( hFile );
-                XContentClose( g_szSaveRoot, &xov );
-                XGetOverlappedResult( &xov, NULL, TRUE );
-                CloseHandle( hEventComplete );
-
-				bytesRead = &dwRead;
-                return GetLastError();
-            }
-
-            CloseHandle( hFile );
-        }
-        else
-        {
-           
-            return GetLastError();
-        }
-    }
-    else
-    {
-        XContentClose( g_szSaveRoot, &xov );
-        XGetOverlappedResult( &xov, NULL, TRUE );
-        CloseHandle( hEventComplete );
- 
-        return dwErr;
-    }
-
-    XContentClose( g_szSaveRoot, &xov );
-
-    // Wait for XCloseContent to complete
-    XGetOverlappedResult( &xov, NULL, TRUE );
-
-    CloseHandle( hEventComplete );
-
-    return ERROR_SUCCESS;
+    return TransferSaveContent(GetSignedInUser(), content, g_szSaveRoot,
+        g_szSaveGame, buffer, bytesToRead, true, bytesRead);
 }
 
 

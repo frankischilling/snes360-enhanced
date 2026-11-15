@@ -25,8 +25,43 @@ static string ControllerPathKey(string path)
     return path;
 }
 
+static bool NormalizeDirectory(string& path)
+{
+    if (path.empty() || path.size() >= MAX_PATH - 4 || path.find_first_of("\r\n") != string::npos)
+        return false;
+    if (path[path.size() - 1] != '\\' && path[path.size() - 1] != '/') path += '\\';
+    return true;
+}
+
+static bool WriteAtomicFile(const string& path, const string& temporary, const string& content)
+{
+    HANDLE file = CreateFile(temporary.c_str(), GENERIC_WRITE, 0, NULL,
+        CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE) return false;
+    DWORD written = 0;
+    bool saved = WriteFile(file, content.data(), static_cast<DWORD>(content.size()), &written, NULL) != FALSE;
+    saved = saved && written == content.size() && FlushFileBuffers(file) != FALSE;
+    if (!CloseHandle(file)) saved = false;
+    if (saved)
+        saved = MoveFileEx(temporary.c_str(), path.c_str(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE;
+    if (!saved) DeleteFile(temporary.c_str());
+    return saved;
+}
+
 CRomPathSettings::CRomPathSettings() : m_bLoaded(false), m_GameGenieEnabled(false)
 {
+    ResetPaths();
+}
+
+void CRomPathSettings::ResetPaths()
+{
+    m_bLoaded = false;
+    m_GameGenieEnabled = false;
+    m_DeviceMap.clear();
+    m_DeviceMap["GAME (XeX Location)"] = "GAME:\\ROMS\\";
+    m_PreviewPath = "GAME:\\previews\\";
+    m_MultitapModes.clear();
 }
 
 CRomPathSettings::~CRomPathSettings()
@@ -35,9 +70,9 @@ CRomPathSettings::~CRomPathSettings()
 
 bool CRomPathSettings::Load(const string & sXmlPath)
 {	
+	ResetPaths();
 	m_sXmlPath = sXmlPath;
-	m_Favorites.clear();
-	m_MultitapModes.clear();
+	LoadFavorites();
 	
 	if (!m_XmlDoc.LoadFile(sXmlPath.c_str()))
 	{
@@ -55,28 +90,26 @@ bool CRomPathSettings::Load(const string & sXmlPath)
 	TiXmlHandle root = TiXmlHandle(element);
  
 
+	m_DeviceMap.clear();
 	element = root.FirstChildElement("MappedDrive").Element();
 	for(element; element; element = element->NextSiblingElement("MappedDrive"))
 	{
-		string DriveName = element->Attribute("DriveName");
-		if (DriveName == "")
-		{
-			 
-			continue;
-		}
-		string DevicePath = element->Attribute("Path");
-		if (DevicePath == "")
-		{
-			 
-			continue;
-		}
+		const char* drive = element->Attribute("DriveName");
+		const char* path = element->Attribute("Path");
+		if (!drive || !*drive || strlen(drive) >= MAX_PATH || !path) continue;
+		string DriveName(drive), DevicePath(path);
+		if (!NormalizeDirectory(DevicePath)) continue;
 		m_DeviceMap[DriveName] = DevicePath;
 	}
+	if (m_DeviceMap.empty()) m_DeviceMap["GAME (XeX Location)"] = "GAME:\\ROMS\\";
 
 
 	element = root.FirstChildElement("PreviewPath").Element();
-	if (element)
-		m_PreviewPath = string(element->GetText());
+	if (element && element->GetText())
+	{
+		string path(element->GetText());
+		if (NormalizeDirectory(path)) m_PreviewPath = path;
+	}
 	
 	// Load GameGenieEnabled setting
 	element = root.FirstChildElement("GameGenieEnabled").Element();
@@ -98,9 +131,6 @@ bool CRomPathSettings::Load(const string & sXmlPath)
 		if (path && *path && mode && (!strcmp(mode, "true") || !strcmp(mode, "false")))
 			m_MultitapModes[ControllerPathKey(path)] = !strcmp(mode, "true");
 	}
-
-	// Load favorites from text file (not from XML)
-	LoadFavorites();
 
 	m_bLoaded = true;
 
@@ -124,8 +154,6 @@ map<string,string>::iterator CRomPathSettings::FindDevice(std::string Device)
 
 bool CRomPathSettings::LoadFavorites()
 {
-	m_Favorites.clear();
-	
 	// Try to load from text file first
 	string favoritesPath = "GAME:\\favorites.txt";
 	
@@ -133,35 +161,40 @@ bool CRomPathSettings::LoadFavorites()
 	HANDLE hFile = CreateFile(favoritesPath.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
-		// File doesn't exist, that's okay - return true with empty favorites
+		DWORD error = GetLastError();
+		if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND) return false;
+		m_Favorites.clear();
 		return true;
 	}
 	
 	// Get file size
-	DWORD dwFileSize = GetFileSize(hFile, NULL);
-	if (dwFileSize == 0)
+	DWORD highSize = 0;
+	DWORD dwFileSize = GetFileSize(hFile, &highSize);
+	if (highSize || dwFileSize == INVALID_FILE_SIZE || dwFileSize > 1024 * 1024)
 	{
 		CloseHandle(hFile);
-		return true;
+		return false;
 	}
 	
 	// Read file content
 	char* pBuffer = new char[dwFileSize + 1];
 	DWORD dwBytesRead = 0;
 	
-	if (!ReadFile(hFile, pBuffer, dwFileSize, &dwBytesRead, NULL))
+	if (!ReadFile(hFile, pBuffer, dwFileSize, &dwBytesRead, NULL) || dwBytesRead != dwFileSize)
 	{
 		delete[] pBuffer;
 		CloseHandle(hFile);
 		return false;
 	}
 	
-	CloseHandle(hFile);
+	bool closed = CloseHandle(hFile) != FALSE;
 	pBuffer[dwBytesRead] = '\0';
 	
 	// Parse lines
 	string content(pBuffer);
 	delete[] pBuffer;
+	if (!closed) return false;
+	set<string> favorites;
 	
 	size_t pos = 0;
 	while (pos < content.length())
@@ -176,19 +209,19 @@ bool CRomPathSettings::LoadFavorites()
 			line = line.substr(0, line.length() - 1);
 		
 		// Trim whitespace
-		while (!line.empty() && (line[0] == ' ' || line[0] == '\t'))
-			line = line.substr(1);
-		while (!line.empty() && (line[line.length() - 1] == ' ' || line[line.length() - 1] == '\t'))
-			line = line.substr(0, line.length() - 1);
+		size_t first = line.find_first_not_of(" \t");
+		if (first == string::npos) line.clear();
+		else line = line.substr(first, line.find_last_not_of(" \t") - first + 1);
 		
-		if (!line.empty())
+		if (!line.empty() && line.size() < MAX_PATH)
 		{
-			m_Favorites.insert(line);
+			favorites.insert(line);
 		}
 		
 		pos = lineEnd + 1;
 	}
 	
+	m_Favorites.swap(favorites);
 	return true;
 }
 
@@ -203,32 +236,16 @@ bool CRomPathSettings::SaveFavorites()
         return GetLastError() == ERROR_FILE_NOT_FOUND;
 	}
 	
-	// Open file for writing (create or truncate)
-	HANDLE hFile = CreateFile(favoritesPath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile == INVALID_HANDLE_VALUE)
-	{
-		return false;
-	}
-	
-	// Write each favorite on a new line
+	string content;
 	for (set<string>::iterator it = m_Favorites.begin(); it != m_Favorites.end(); ++it)
-	{
-		string line = *it + "\r\n";  // Windows line ending
-		DWORD dwBytesWritten = 0;
-		if (!WriteFile(hFile, line.c_str(), line.length(), &dwBytesWritten, NULL))
-		{
-			CloseHandle(hFile);
-			return false;
-		}
-	}
-	
-	CloseHandle(hFile);
-	return true;
+		content += *it + "\r\n";
+	if (content.size() > 1024 * 1024) return false;
+	return WriteAtomicFile(favoritesPath, favoritesPath + ".tmp", content);
 }
 
 bool CRomPathSettings::AddFavorite(const string& name)
 {
-    if (name.empty()) return false;
+    if (name.empty() || name.size() >= MAX_PATH || name.find_first_of("\r\n") != string::npos) return false;
     if (IsFavorite(name)) return true;
     m_Favorites.insert(name);
     if (SaveFavorites()) return true;
@@ -292,25 +309,10 @@ bool CRomPathSettings::SetMultitapMode(const string & romPath, bool enabled)
     }
     // Replace settings only after the complete temporary file reaches storage.
     const string temporary = m_sXmlPath + ".controllers.tmp";
-    HANDLE file = CreateFile(temporary.c_str(), GENERIC_WRITE, 0, NULL,
-                             CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (file == INVALID_HANDLE_VALUE)
-    {
-        m_MultitapModes = previous;
-        return false;
-    }
     TiXmlPrinter printer;
     doc.Accept(&printer);
-    DWORD written = 0;
-    bool saved = WriteFile(file, printer.CStr(), printer.Size(), &written, NULL) != FALSE;
-    saved = saved && written == printer.Size() && FlushFileBuffers(file) != FALSE;
-    if (!CloseHandle(file)) saved = false;
-    if (saved)
-        saved = MoveFileEx(temporary.c_str(), m_sXmlPath.c_str(),
-                           MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE;
-    if (!saved)
+    if (!WriteAtomicFile(m_sXmlPath, temporary, printer.CStr()))
     {
-        DeleteFile(temporary.c_str());
         m_MultitapModes = previous;
         return false;
     }
@@ -445,4 +447,3 @@ bool CRomPathSettings::CreateDefaultSettings(const string & sXmlPath)
 	}
 	return false;
 }
- 

@@ -8,6 +8,7 @@
 #include "Main.h"
 #include "RomSettings.h"
 #include "GeneralFunctions.h"
+#include "TitleText.h"
 #include "cheats.h"  // For Game Genie code processing
 
 extern int RunEmulation(char *path, char *RomName);
@@ -71,11 +72,6 @@ void CFavoritesList::LoadFavorites()
 				// Skip directories
 				if (!(oFindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 				{
-					// Get found filename in lowercase for comparison
-					char foundLower[MAX_PATH];
-					strcpy(foundLower, oFindData.cFileName);
-					_strlwr(foundLower);
-					string foundFileNameLower(foundLower);
 					
 					// Check if this file matches any favorite (case-insensitive)
 					for (set<string>::iterator favIt = favorites.begin(); 
@@ -83,26 +79,16 @@ void CFavoritesList::LoadFavorites()
 						 ++favIt)
 					{
 						string favoriteName = *favIt;
-						// Convert favorite name to lowercase for comparison
-						char favLower[MAX_PATH];
-						strcpy(favLower, favoriteName.c_str());
-						_strlwr(favLower);
-						string favLowerStr(favLower);
 						
 						// Match case-insensitively
-						if (foundFileNameLower == favLowerStr)
+						if (_stricmp(oFindData.cFileName, favoriteName.c_str()) == 0)
 						{
 							// Check if we haven't already added this ROM
 							bool alreadyAdded = false;
 							for (size_t i = 0; i < m_FavoritesListData.size(); i++)
 							{
-								// Case-insensitive comparison
-								char existingLower[MAX_PATH];
-								strcpy(existingLower, m_FavoritesListData[i].c_str());
-								_strlwr(existingLower);
-								string existingLowerStr(existingLower);
 								
-								if (existingLowerStr == favLowerStr)
+								if (_stricmp(m_FavoritesListData[i].c_str(), favoriteName.c_str()) == 0)
 								{
 									alreadyAdded = true;
 									break;
@@ -158,7 +144,7 @@ void CFavoritesList::LoadFavorites()
 
 HRESULT CFavoritesList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 {
-	wchar_t previewPath[MAX_PATH];
+	std::wstring previewPath;
 	HXUIOBJ hPreviewImage;
 
 	HXUIOBJ owner = NULL;
@@ -180,13 +166,13 @@ HRESULT CFavoritesList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 					{
 						string previewName(fname);
 
-						swprintf_s(previewPath, MAX_PATH, L"file://%S", ReplaceCharInString(romPaths.m_PreviewPath, '\\', "/").c_str());
+						previewPath = L"file://" + RomTitleText(ReplaceCharInString(romPaths.m_PreviewPath, '\\', "/").c_str());
 						XuiElementDiscardResources(hPreviewImage, XUI_DISCARD_ALL);
-						XuiElementSetBasePath(hPreviewImage, previewPath);
+						XuiElementSetBasePath(hPreviewImage, previewPath.c_str());
 
 						previewName = ReplaceCharInString(previewName, '\\',"/");
-						swprintf_s(previewPath, MAX_PATH, L"file://%S", previewName.c_str());
-						XuiImageElementSetImagePath(hPreviewImage, previewPath);
+						previewPath = L"file://" + RomTitleText(previewName.c_str());
+						XuiImageElementSetImagePath(hPreviewImage, previewPath.c_str());
 					}
 				}
 			}

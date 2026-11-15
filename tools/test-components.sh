@@ -18,6 +18,14 @@ compile -Itests/shims -Isnes9x-1.51-src-d3d/win32 -Isnes9x-1.51-src-d3d \
     snes9x-1.51-src-d3d/TinyXML/tinyxmlparser.cpp snes9x-1.51-src-d3d/TinyXML/tinyxmlerror.cpp \
     -o "$build_dir/settings"
 (cd "$build_dir" && ./settings)
+compile -Itests/shims -Isnes9x-1.51-src-d3d/win32 \
+    tests/storage_test.cpp -o "$build_dir/storage"
+"$build_dir/storage"
+compile -DHAVE_STDINT_H -ffunction-sections -fdata-sections \
+    -Itests/shims -Isnes9x-1.51-src-d3d \
+    tests/srtc_test.cpp snes9x-1.51-src-d3d/srtc.cpp \
+    -Wl,--gc-sections -o "$build_dir/srtc"
+"$build_dir/srtc"
 compile -DHAVE_STDINT_H -ffunction-sections -fdata-sections \
     -Itests/shims -Isnes9x-1.51-src-d3d -Isnes9x-1.51-src-d3d/win32 \
     tests/multitap_test.cpp snes9x-1.51-src-d3d/controls.cpp \

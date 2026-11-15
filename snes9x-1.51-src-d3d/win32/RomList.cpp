@@ -1,6 +1,7 @@
 #include <xmp.h>
 #include "RomList.h"
 #include "RomFilter.h"
+#include "TitleText.h"
 #include "Storage.h"
 #include "Main.h"
 #include "RomSettings.h"
@@ -13,12 +14,11 @@ extern HXUIOBJ phObj;
 extern HXUIOBJ hScene; 
 extern HXUIOBJ hMainScene;
 extern HXUIOBJ hRomListScene;
-char szRoms[MAX_PATH]; 
 char szRomPath[MAX_PATH];
 extern GameStorage snesStoreage;
 extern CRomPathSettings romPaths;
 
-wchar_t DeviceText[60];
+wchar_t DeviceText[MAX_PATH + 32];
 std::vector<std::string> m_ListData;
 map<string,string>::iterator romPath;
 std::string ReplaceCharInString(const std::string & source, char charToReplace, const std::string replaceString);
@@ -50,7 +50,8 @@ void SaveConfig(void)
 	XOVERLAPPED xov = {0};
 
 	strcpy(Settings.romPath, szRomPath);
-	hEventComplete = CreateEvent( NULL, FALSE, FALSE, NULL );
+	hEventComplete = CreateEvent( NULL, TRUE, FALSE, NULL );
+	if (!hEventComplete) return;
 
 	xov.hEvent = hEventComplete;
 	
@@ -58,11 +59,11 @@ void SaveConfig(void)
 	
 	if (stream)
 	{
-		snesStoreage.WriteStream(stream, (char *)&Settings, sizeof(Settings));
+		bool saved = snesStoreage.WriteStream(stream, (char *)&Settings, sizeof(Settings)) == sizeof(Settings);
 		snesStoreage.CloseStream(stream, &xov);
-		CloseHandle(hEventComplete);
-		snesStoreage.WriteThumbnail("Snes360Config.dat", "game:\\media\\saveicon.png" );
+		if (saved) snesStoreage.WriteThumbnail("Snes360Config.dat", "game:\\media\\saveicon.png" );
 	}
+	CloseHandle(hEventComplete);
 
 }
 
@@ -275,7 +276,7 @@ CRomList::CRomList()
 	HANDLE hEventComplete = NULL;
 	XOVERLAPPED xov = {0};
 
-	hEventComplete = CreateEvent( NULL, FALSE, FALSE, NULL );
+	hEventComplete = CreateEvent( NULL, TRUE, FALSE, NULL );
 
 	xov.hEvent = hEventComplete;
 
@@ -283,13 +284,19 @@ CRomList::CRomList()
 		
 	if (stream)
 	{
-		snesStoreage.ReadStream(stream, (char *)&Settings, sizeof(Settings));
+		SSettings saved = Settings;
+		bool complete = snesStoreage.ReadStream(stream, (char *)&saved, sizeof(saved)) == sizeof(saved);
 		snesStoreage.CloseStream(stream, &xov);
-		CloseHandle(hEventComplete);
-
-		romPath = romPaths.FindDevice(std::string(Settings.romPath));
+		if (complete)
+		{
+			saved.romPath[sizeof(saved.romPath) - 1] = '\0';
+			Settings = saved;
+			map<string, string>::iterator selected = romPaths.FindDevice(Settings.romPath);
+			if (selected != romPaths.GetDeviceMapEnd()) romPath = selected;
+		}
 	 
 	}
+	if (hEventComplete) CloseHandle(hEventComplete);
 
     strcpy((char *)szRomPath, romPath->first.c_str());
 	swprintf_s(DeviceText, L"Current Device : %S", szRomPath);
@@ -299,7 +306,7 @@ CRomList::CRomList()
 
 HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 {
-	wchar_t previewPath[MAX_PATH];
+	std::wstring previewPath;
 	 
 
 	HXUIOBJ hPreviewImage = NULL;
@@ -324,13 +331,13 @@ HRESULT CRomList::OnNotify( XUINotify *hObj, BOOL& bHandled )
 		  
 			
 
-			swprintf_s(previewPath,L"file://%S", ReplaceCharInString(romPaths.m_PreviewPath, '\\', "/").c_str());
+			previewPath = L"file://" + RomTitleText(ReplaceCharInString(romPaths.m_PreviewPath, '\\', "/").c_str());
 			XuiElementDiscardResources(hPreviewImage, XUI_DISCARD_ALL);
-			XuiElementSetBasePath(hPreviewImage, previewPath);
+			XuiElementSetBasePath(hPreviewImage, previewPath.c_str());
 
 			previewName = ReplaceCharInString(previewName, '\\',"/");
-			swprintf_s(previewPath,L"file://%S", previewName.c_str());
-			XuiImageElementSetImagePath(hPreviewImage, previewPath);
+			previewPath = L"file://" + RomTitleText(previewName.c_str());
+			XuiImageElementSetImagePath(hPreviewImage, previewPath.c_str());
 						 
 			break;
 
@@ -376,11 +383,6 @@ HRESULT CRomList::OnRescanRoms( char *szPath,  BOOL& bHandled )
 						// Skip directories
 						if (!(oFindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 						{
-							// Get found filename in lowercase for comparison
-							char foundLower[MAX_PATH];
-							strcpy(foundLower, oFindData.cFileName);
-							_strlwr(foundLower);
-							string foundFileNameLower(foundLower);
 							
 							// Check if this file matches any favorite (case-insensitive)
 							for (set<string>::iterator favIt = favorites.begin(); 
@@ -388,26 +390,16 @@ HRESULT CRomList::OnRescanRoms( char *szPath,  BOOL& bHandled )
 								 ++favIt)
 							{
 								string favoriteName = *favIt;
-								// Convert favorite name to lowercase for comparison
-								char favLower[MAX_PATH];
-								strcpy(favLower, favoriteName.c_str());
-								_strlwr(favLower);
-								string favLowerStr(favLower);
 								
 								// Match case-insensitively
-								if (foundFileNameLower == favLowerStr)
+								if (_stricmp(oFindData.cFileName, favoriteName.c_str()) == 0)
 								{
 									// Check if we haven't already added this ROM
 									bool alreadyAdded = false;
 									for (size_t i = 0; i < m_ListData.size(); i++)
 									{
-										// Case-insensitive comparison
-										char existingLower[MAX_PATH];
-										strcpy(existingLower, m_ListData[i].c_str());
-										_strlwr(existingLower);
-										string existingLowerStr(existingLower);
 										
-										if (existingLowerStr == favLowerStr)
+										if (_stricmp(m_ListData[i].c_str(), favoriteName.c_str()) == 0)
 										{
 											alreadyAdded = true;
 											break;
@@ -436,13 +428,12 @@ HRESULT CRomList::OnRescanRoms( char *szPath,  BOOL& bHandled )
 	else
 	{
 		// Normal mode - load all ROMs from current path
-		strcpy((char *)szRoms, romPath->second.c_str());
-		strcat(szRoms, "*.*");
+		string searchPath = romPath->second + "*.*";
 	 
 		HANDLE hFind;	
 		WIN32_FIND_DATAA oFindData;
 
-		hFind = FindFirstFile(szRoms, &oFindData);
+		hFind = FindFirstFile(searchPath.c_str(), &oFindData);
 
 		if (hFind != INVALID_HANDLE_VALUE)
 		{

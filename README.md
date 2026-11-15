@@ -5,7 +5,7 @@ Direct3D 9 and HLSL shaders for video, XAudio2 for audio, Xbox 360 controllers,
 and XUI scenes for the interface. The changes focus on the Xbox 360 front end
 and build support. The SNES emulation core comes from Snes9x.
 
-Current version: 0.39 Beta.
+Current version: 0.40 Beta.
 
 Achievements are removed. The source has no achievement handlers, triggers,
 generated headers, or SPA data. The XEX image settings do not embed a SPA
@@ -73,6 +73,10 @@ Games must support multitap to use extra players.
 
 ## Changes by version
 
+- 0.40 Beta repairs Game Genie keyboard cancellation, protects Favorites from
+  failed writes, and fixes crashes caused by malformed settings and stale
+  storage selections. It also repairs SRAM loading, S-RTC clock persistence,
+  failed ROM launches, and save-stream handles and cleanup.
 - 0.39 Beta adds per-game multitap selection for three or four players, repairs
   adapter bounds and serial counters, and connects the Reset Game button.
 - 0.38 Beta adds Favorites removal, brings Game Genie input to the ROM browser,
@@ -88,7 +92,7 @@ Games must support multitap to use extra players.
 
 Earlier build fixes added a standalone CRC32 implementation, C89-compatible
 variable declarations, and Xbox 360 project definitions. More details for the
-current release are in [the release notes](docs/release-0.39.md).
+current release are in [the release notes](docs/release-0.40.md).
 
 ## Install or update
 
@@ -123,6 +127,17 @@ Background music is optional when building your own package.
 Before updating, back up `settings.xml`, `favorites.txt`, saves, and states.
 Replace the executable and `media` folder together and keep your existing
 settings and favorites. ROMs and personal data are not included in releases.
+
+If `settings.xml` is malformed or unreadable, the application uses safe ROM
+and preview paths beside the executable and leaves the file intact. Missing
+or invalid drive entries fall back to `GAME:\ROMS\`. A saved device that is no
+longer configured falls back to the first available entry. Correct the XML
+to restore your custom paths.
+
+Favorites updates replace `favorites.txt` only after the complete new file
+has been written and flushed. A failed update keeps the existing file. The
+loader rejects files larger than 1 MiB and skips entries too long to be ROM
+filenames.
 
 ## Controls
 
@@ -234,14 +249,18 @@ that the linker discarded achievement functions from the SDK as well.
 Run `python tests/check_navigation.py` to check the FPS, multitap, reset and
 Favorites navigation paths. Run `bash tools/test-components.sh` on Linux or
 through WSL to compile and run the frontend, settings and controller tests
-with address and undefined behavior sanitizers. The controller test uses the
+with address and undefined behavior sanitizers. Storage tests cover mount
+failures, invalid file handles, cleanup, event ownership and byte counts.
+S-RTC tests check timestamp replacement, byte order and maximum SRAM offsets.
+Keyboard tests include cancellation reported through the Guide's extended
+completion status. The controller test uses the
 production core for four-pad routing, both adapter banks, device detection,
 serial and automatic reads, disconnects and mode changes. Settings tests check
 per-ROM choices, XML preservation and failed writes. The frontend tests cover
 large lists, long titles, filtering and keyboard requests. CI runs these same
 checks.
 
-The 0.39 release is compiled with Visual Studio 2008 SP1 and XDK 2.0.9328.0.
+The 0.40 release is compiled with Visual Studio 2008 SP1 and XDK 2.0.9328.0.
 Build and package inspection do not establish console runtime behavior.
 Console launch, menu navigation and co-op gameplay still need hardware testing.
 
