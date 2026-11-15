@@ -146,12 +146,12 @@ bool CDirect3D::initialize(D3DDevice *pDev)
 	dPresentParams.BackBufferHeight = 720;
 	dPresentParams.PresentationInterval = D3DPRESENT_INTERVAL_ONE ;
  
-	pDevice->Reset(&dPresentParams);
+	if (FAILED(pDevice->Reset(&dPresentParams))) return false;
  
 
 	    // Compile pixel shader.
-    ID3DXBuffer* pPixelShaderCode;
-    ID3DXBuffer*  pPixelErrorMsg;
+    ID3DXBuffer* pPixelShaderCode = NULL;
+    ID3DXBuffer* pPixelErrorMsg = NULL;
     hr = D3DXCompileShader( g_strPixelShaderProgram,
                             ( UINT )strlen( g_strPixelShaderProgram ),
                             NULL,
@@ -165,13 +165,20 @@ bool CDirect3D::initialize(D3DDevice *pDev)
     if( FAILED( hr ) )
     {
         if( pPixelErrorMsg )
+        {
             OutputDebugString( ( char* )pPixelErrorMsg->GetBufferPointer() );
-        return E_FAIL;
+            pPixelErrorMsg->Release();
+        }
+        if (pPixelShaderCode) pPixelShaderCode->Release();
+        return false;
     }
+    if (pPixelErrorMsg) pPixelErrorMsg->Release();
 
     // Create pixel shader.
-    pDevice->CreatePixelShader( ( DWORD* )pPixelShaderCode->GetBufferPointer(),
-                                     &g_pPixelShader );
+    if (g_pPixelShader) { g_pPixelShader->Release(); g_pPixelShader = NULL; }
+    hr = pDevice->CreatePixelShader( ( DWORD* )pPixelShaderCode->GetBufferPointer(), &g_pPixelShader );
+    pPixelShaderCode->Release();
+    if (FAILED(hr)) return false;
 
 	    // Create vertex declaration
     if( NULL == g_pGradientVertexDecl )
@@ -184,7 +191,7 @@ bool CDirect3D::initialize(D3DDevice *pDev)
         };
 
         if( FAILED( pDevice->CreateVertexDeclaration( decl, &g_pGradientVertexDecl ) ) )
-            return E_FAIL;
+            return false;
     }
  
 	    // Create vertex shader
@@ -196,16 +203,14 @@ bool CDirect3D::initialize(D3DDevice *pDev)
                                        &pShaderCode, NULL, NULL ) ) )
             return false;
 
-        if( FAILED( pDevice->CreateVertexShader( ( DWORD* )pShaderCode->GetBufferPointer(),
-                                                      &g_pGradientVertexShader ) ) )
-            return false;
-
+        hr = pDevice->CreateVertexShader( ( DWORD* )pShaderCode->GetBufferPointer(), &g_pGradientVertexShader );
         pShaderCode->Release();
+        if (FAILED(hr)) return false;
     }
 
 	if (NULL == vertexDeclaration)
 	{
-		pDevice->CreateVertexDeclaration(decl,&vertexDeclaration);
+		if (FAILED(pDevice->CreateVertexDeclaration(decl,&vertexDeclaration))) return false;
 	}
 
 	if (NULL == vertexBuffer)
@@ -317,7 +322,7 @@ void CDirect3D::render(SSurface Src)
 	{
 		wasInXUI = false;	
 
-		initialize(pDevice);	
+		if (!initialize(pDevice)) { run_loop = false; return; }
 		pDevice->SetStreamSource(0, NULL, 0, 0);
 		vertexBuffer->Release();
 		vertexBuffer = NULL;

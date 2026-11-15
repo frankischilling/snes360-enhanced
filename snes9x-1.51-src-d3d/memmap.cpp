@@ -423,7 +423,7 @@ extern GameStorage snesStoreage;
 bool8 CMemory::Init (void)
 {
     RAM	 = (uint8 *) XMemAlloc(0x20000, g_dwPhysicalMemoryAttributes);
-    SRAM = (uint8 *) malloc(0x20000);
+    SRAM = (uint8 *) malloc(0x20000 + SRTC_SRAM_PAD);
     VRAM = (uint8 *) malloc(0x10000);
     ROM  = (uint8 *) malloc(MAX_ROM_SIZE + 0x200 + 0x8000);
 
@@ -464,7 +464,7 @@ bool8 CMemory::Init (void)
     }
 
 	XMemSet(RAM,  0x00, 0x20000);
-	XMemSet(SRAM, 0x00, 0x20000);
+	XMemSet(SRAM, 0x00, 0x20000 + SRTC_SRAM_PAD);
 	XMemSet(VRAM, 0x00, 0x10000);
 	XMemSet(ROM,  0x00, MAX_ROM_SIZE + 0x200 + 0x8000);
 
@@ -1358,7 +1358,8 @@ bool8 CMemory::LoadSRAM (const char *filename)
 	XCONTENT_DATA contentData;
 
 	FILE	*file;
-	int		size, len = 0;
+	int		size;
+	DWORD len = 0;
 	char	sramName[_MAX_PATH + 1];
 
 	strcpy(sramName, filename);
@@ -1375,12 +1376,12 @@ bool8 CMemory::LoadSRAM (const char *filename)
 		size = (1 << (Multi.sramSizeB + 3)) * 128;
 
 		
-		contentData.DeviceID = snesStoreage.GetSignedInUser();
+		contentData.DeviceID = snesStoreage.m_DeviceID;
 		contentData.dwContentType = XCONTENTTYPE_SAVEDGAME;
 		swprintf_s(contentData.szDisplayName,L"Snes360Save");
 		strcpy_s(contentData.szFileName,S9xGetFilename(".srm", SRAM_DIR));
 
-		snesStoreage.ReadSaveGame(&contentData, (char *)Multi.sramB, 0x10000, (DWORD *)len);
+		snesStoreage.ReadSaveGame(&contentData, (char *)Multi.sramB, 0x10000, &len);
 				 
 		if (len - size == 512)
 			memmove(Multi.sramB, Multi.sramB + 512, size);
@@ -1399,13 +1400,17 @@ bool8 CMemory::LoadSRAM (const char *filename)
 		swprintf_s(contentData.szDisplayName,L"Snes360Save");
 		strcpy_s(contentData.szFileName,S9xGetFilename(".srm", SRAM_DIR));
 
-		snesStoreage.ReadSaveGame(&contentData, (char *)SRAM, 0x20000, (DWORD *)len);
-
-		file = fopen(sramName, "rb");
-		if (file)
+		len = 0;
+		bool loaded = snesStoreage.ReadSaveGame(&contentData, (char *)SRAM,
+		    0x20000 + SRTC_SRAM_PAD, &len) == ERROR_SUCCESS && len > 0;
+		if (!loaded && (file = fopen(sramName, "rb")) != NULL)
 		{
-			len = fread((char *) SRAM, 1, 0x20000, file);
+			len = fread((char *) SRAM, 1, 0x20000 + SRTC_SRAM_PAD, file);
 			fclose(file);
+			loaded = len > 0;
+		}
+		if (loaded)
+		{
 			if (len - size == 512)
 				memmove(SRAM, SRAM + 512, size);
 
@@ -1493,13 +1498,14 @@ bool8 CMemory::SaveSRAM (const char *filename)
 
 		size = (1 << (Multi.sramSizeB + 3)) * 128;
  
-		snesStoreage.WriteSaveGame(sramName,romName, (char *) (char *) Multi.sramB, (DWORD)size);
-		snesStoreage.WriteThumbnail(sramName, "game:\\media\\saveicon.png" );
-
+		DWORD result = snesStoreage.WriteSaveGame(name,romName, (char *) Multi.sramB, (DWORD)size);
 		strcpy(ROMFilename, temp);
+		if (result != ERROR_SUCCESS) return FALSE;
+		snesStoreage.WriteThumbnail(name, "game:\\media\\saveicon.png" );
     }
 
     size = SRAMSize ? (1 << (SRAMSize + 3)) * 128 : 0;
+	if (size > 0x20000) size = 0x20000;
 
 	if (Settings.SRTC)
 	{
@@ -1510,13 +1516,11 @@ bool8 CMemory::SaveSRAM (const char *filename)
 	if (Settings.SDD1)
 		S9xSDD1SaveLoggedData();
 
-	if (size > 0x20000)
-		size = 0x20000;
-
 	if (size)
 	{
 		 
-		snesStoreage.WriteSaveGame(sramName,romName, (char *) SRAM, (DWORD)size);
+		if (snesStoreage.WriteSaveGame(sramName,romName, (char *) SRAM, (DWORD)size) != ERROR_SUCCESS)
+			return FALSE;
 		snesStoreage.WriteThumbnail(sramName, "game:\\media\\saveicon.png" );
  
 		if (Settings.SPC7110RTC)

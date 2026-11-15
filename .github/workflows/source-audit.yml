@@ -17,5 +17,5 @@ jobs:
           python-version: '3.12'
       - run: python tools/audit-release.py
       - run: python tests/check_navigation.py
-      - name: Frontend, settings and multitap component tests
+      - name: Frontend, settings, storage, S-RTC and multitap component tests
         run: bash tools/test-components.sh

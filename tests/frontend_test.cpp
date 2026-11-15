@@ -12,20 +12,28 @@ HXUIOBJ hScene = NULL;
 extern int g_NumPendingGameGenieCodes;
 extern char g_PendingGameGenieCodes[3][256];
 static DWORD keyboardResult = ERROR_IO_PENDING, completion = ERROR_SUCCESS;
+static DWORD keyboardExtendedError = ERROR_SUCCESS;
 static bool signalled = false, eventFailure = false;
 static HRESULT sceneResult = S_OK;
 static std::wstring input;
 static int launches = 0, events = 0, closes = 0, cancellations = 0;
+static int emulationResult = 0;
 static std::string launchedDirectory, launchedFilename;
 static std::vector<std::string> applied;
-HANDLE CreateEvent(void*, BOOL, BOOL, const char*)
-{ if (eventFailure) return NULL; ++events; return reinterpret_cast<HANDLE>(1); }
+HANDLE CreateEvent(void*, BOOL manualReset, BOOL, const char*)
+{ assert(manualReset); if (eventFailure) return NULL; ++events; return reinterpret_cast<HANDLE>(1); }
 BOOL CloseHandle(HANDLE handle) { assert(handle); ++closes; return TRUE; }
 DWORD XCancelOverlapped(XOVERLAPPED*) { ++cancellations; return ERROR_SUCCESS; }
 DWORD XGetOverlappedResult(XOVERLAPPED*, DWORD*, BOOL) { return completion; }
+DWORD XGetOverlappedExtendedError(XOVERLAPPED* overlapped) { return overlapped->dwExtendedError; }
 DWORD WaitForSingleObject(HANDLE, DWORD) { return signalled ? WAIT_OBJECT_0 : 258; }
-DWORD XShowKeyboardUI(DWORD, DWORD, LPCWSTR, LPCWSTR, LPCWSTR, WCHAR* result, DWORD capacity, XOVERLAPPED*)
-{ assert(input.size() < capacity); std::wcscpy(result, input.c_str()); return keyboardResult; }
+DWORD XShowKeyboardUI(DWORD, DWORD, LPCWSTR, LPCWSTR, LPCWSTR, WCHAR* result, DWORD capacity, XOVERLAPPED* overlapped)
+{
+    assert(input.size() < capacity);
+    std::wcscpy(result, input.c_str());
+    overlapped->dwExtendedError = keyboardExtendedError;
+    return keyboardResult;
+}
 HRESULT XuiSceneCreate(LPCWSTR, LPCWSTR, void*, HXUIOBJ* scene)
 { *scene = reinterpret_cast<HXUIOBJ>(2); return sceneResult; }
 void XuiDestroyObject(HXUIOBJ scene) { assert(scene); }
@@ -36,7 +44,7 @@ int RunEmulation(char* directory, char* filename)
 {
     ++launches; launchedDirectory = directory; launchedFilename = filename; applied.clear();
     for (int i = 0; i < g_NumPendingGameGenieCodes; ++i) applied.push_back(g_PendingGameGenieCodes[i]);
-    return 0;
+    return emulationResult;
 }
 
 int main()
@@ -105,6 +113,61 @@ int main()
     assert(!launch.Busy()); eventFailure = false;
     assert(launch.Begin(owner, "USB:\\", std::string(260, 'R'), false) == E_FAIL);
     assert(launches == 4);
+    const DWORD directCancellations[] = {ERROR_CANCELLED, ERROR_OPERATION_ABORTED};
+    for (size_t i = 0; i < sizeof(directCancellations) / sizeof(directCancellations[0]); ++i)
+    {
+        keyboardResult = directCancellations[i]; input = L"BAD";
+        int beforeLaunches = launches, beforeMessages = messageCount;
+        launch.Begin(owner, "USB:\\", "direct-cancel.smc", true);
+        assert(!launch.Busy() && launches == beforeLaunches + 1 && applied.empty());
+        assert(messageCount == beforeMessages);
+    }
+    // The Guide reports B/Guide cancellation in the extended completion status.
+    // The general status can be ERROR_FUNCTION_FAILED instead of ERROR_CANCELLED.
+    struct KeyboardCase { DWORD status; DWORD extended; bool cancelled; };
+    const KeyboardCase keyboardCases[] = {
+        {ERROR_FUNCTION_FAILED, ERROR_CANCELLED, true},
+        {ERROR_SUCCESS, ERROR_CANCELLED, true},
+        {ERROR_CANCELLED, ERROR_SUCCESS, true},
+        {ERROR_OPERATION_ABORTED, ERROR_SUCCESS, true},
+        {ERROR_FUNCTION_FAILED, ERROR_OPERATION_ABORTED, true},
+        {ERROR_FUNCTION_FAILED, 5, false},
+        {ERROR_SUCCESS, 5, false},
+        {ERROR_FUNCTION_FAILED, ERROR_SUCCESS, false}
+    };
+    keyboardResult = ERROR_IO_PENDING;
+    for (size_t i = 0; i < sizeof(keyboardCases) / sizeof(keyboardCases[0]); ++i)
+    {
+        completion = keyboardCases[i].status;
+        keyboardExtendedError = keyboardCases[i].extended;
+        input = L"BAD"; // Cancel must discard even an invalid unfinished entry.
+        int beforeLaunches = launches, beforeMessages = messageCount;
+        assert(launch.Begin(owner, "USB:\\", "skip.smc", true) == S_OK);
+        assert(launch.Busy() && launches == beforeLaunches);
+        launch.Update();
+        assert(!launch.Busy());
+        assert(launches == beforeLaunches + (keyboardCases[i].cancelled ? 1 : 0));
+        assert(messageCount == beforeMessages + (keyboardCases[i].cancelled ? 0 : 1));
+        assert(g_NumPendingGameGenieCodes == 0 && applied.empty());
+        launch.Update();
+        assert(launches == beforeLaunches + (keyboardCases[i].cancelled ? 1 : 0));
+    }
+    keyboardExtendedError = ERROR_SUCCESS;
+    // A completion signal is not enough if the request still reports pending.
+    completion = ERROR_IO_INCOMPLETE; input = L"C222-D4DD";
+    int beforeLaunches = launches;
+    launch.Begin(owner, "USB:\\", "still-pending.smc", true);
+    launch.Update(); assert(launch.Busy() && launches == beforeLaunches);
+    completion = ERROR_SUCCESS;
+    launch.Update(); assert(!launch.Busy() && launches == beforeLaunches + 1);
+    assert(applied.size() == 1 && applied[0] == "C222-D4DD");
+    emulationResult = 1;
+    beforeLaunches = launches;
+    int beforeMessages = messageCount;
+    launch.Begin(owner, "USB:\\", "bad-rom.smc", false);
+    assert(launches == beforeLaunches + 1 && messageCount == beforeMessages + 1);
+    assert(!launch.Busy() && !hScene && g_NumPendingGameGenieCodes == 0);
+    emulationResult = 0;
     {
         CRomLaunch abandoned;
         abandoned.Begin(owner, "USB:\\", "abandoned.smc", true);

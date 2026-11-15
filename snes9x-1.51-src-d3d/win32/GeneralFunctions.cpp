@@ -38,7 +38,7 @@ DWORD CheckMenuItem(
 
 const char *GetFilename (char *path, const char *InFileName, char *fext)
 {
-    static char filename [MAX_PATH + 1];
+    static std::string filename;
     char dir [_MAX_DIR + 1];
     char drive [_MAX_DRIVE + 1];
     char fname [_MAX_FNAME + 1];
@@ -51,9 +51,8 @@ const char *GetFilename (char *path, const char *InFileName, char *fext)
 			fatxfname = fatxfname.substr(0,37);
 	}
 
-   _snprintf(filename, sizeof(filename),  "%s%s.%s",path, 
-              fatxfname.c_str(), fext);
-    return (filename);
+    filename = std::string(path) + fatxfname + "." + fext;
+    return filename.size() < MAX_PATH ? filename.c_str() : NULL;
 }
 
 

@@ -3138,7 +3138,11 @@ int RunEmulation(char *path, char *RomName)
 	InitLUTs();
 
 	S9xCustomDisplayString = WinDisplayString;
-	Direct3D.initialize(pDevice); 
+	if (!Direct3D.initialize(pDevice))
+	{
+		Direct3D.deInitialize();
+		return 1;
+	}
     GUI.ControlForced = 0xff;
     GUI.ControllerOption = SNES_JOYPAD;
 	GUI.FullScreen = true; 
@@ -3164,6 +3168,7 @@ int RunEmulation(char *path, char *RomName)
    
 
     Settings.StopEmulation = !LoadROM (rom_filename);
+	const bool romLoaded = !Settings.StopEmulation;
 
     if (!Settings.StopEmulation)
     {
@@ -3240,6 +3245,7 @@ int RunEmulation(char *path, char *RomName)
 	//InputThread = (HANDLE)_beginthreadex(NULL,0,&ProcessInput,(void *)eventHandle,0,NULL);
 
 	run_loop = true;	
+	if (!romLoaded) goto loop_exit;
 
 
 
@@ -3380,7 +3386,7 @@ loop_exit:
 
 //		ExitInputThread();
 
-		return 0;
+		return romLoaded ? 0 : 1;
 }  
 
 void RestoreGUIDisplay ()

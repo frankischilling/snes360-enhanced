@@ -62,7 +62,7 @@ HRESULT CRomLaunch::Begin(CXuiScene& owner, const std::string& directory,
         Finish(ERROR_SUCCESS);
         return S_OK;
     }
-    m_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+    m_event = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (!m_event)
     {
         ShowError(L"Could not open the Game Genie keyboard. Please try again.");
@@ -82,7 +82,10 @@ void CRomLaunch::Update()
 {
     if (!m_pending || WaitForSingleObject(m_event, 0) != WAIT_OBJECT_0) return;
     DWORD result = XGetOverlappedResult(&m_overlapped, NULL, FALSE);
-    if (result != ERROR_IO_INCOMPLETE) Finish(result);
+    if (result == ERROR_IO_INCOMPLETE) return;
+    // The Guide puts Cancel/Guide-button status in the extended result.
+    DWORD extended = XGetOverlappedExtendedError(&m_overlapped);
+    Finish(extended != ERROR_SUCCESS ? extended : result);
 }
 
 void CRomLaunch::Finish(DWORD result)
@@ -115,10 +118,11 @@ void CRomLaunch::Finish(DWORD result)
         return;
     }
     hr = m_owner->NavigateForward(hScene);
+    bool emulationFailed = false;
     if (SUCCEEDED(hr))
     {
         XMPPause(NULL);
-        RunEmulation(const_cast<char*>(m_directory.c_str()), const_cast<char*>(m_filename.c_str()));
+        emulationFailed = RunEmulation(const_cast<char*>(m_directory.c_str()), const_cast<char*>(m_filename.c_str())) != 0;
         SaveConfig();
         XMPContinue(NULL);
     }
@@ -128,4 +132,6 @@ void CRomLaunch::Finish(DWORD result)
     g_NumPendingGameGenieCodes = 0;
     memset(g_PendingGameGenieCodes, 0, sizeof(g_PendingGameGenieCodes));
     m_active = false;
+    if (FAILED(hr)) ShowError(L"Could not open the in-game menu. Please try again.");
+    else if (emulationFailed) ShowError(L"Could not start the selected ROM. Check the ROM and media files.");
 }

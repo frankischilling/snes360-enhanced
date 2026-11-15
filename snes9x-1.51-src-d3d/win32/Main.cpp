@@ -409,7 +409,7 @@ public:
 		if( hObjPressed == m_button4 )
 		{
 			const WCHAR * button_text = L"OK";
-			ShowMessageBoxEx(NULL,NULL,L"About", L"Snes360 V0.39 Beta\n\nOriginal by Anonymous\n07-16-2010 11:59pm\n\nEnhanced by frankischilling\n2025\n\nGreets to r0wdy, Arak0n, kl0wn, idc, direw0lf, PeteNub, MomDad, Odb718, Angerwound, Redline99, TJ_CRS, Xenon7, Xantium, _skitzo_\n\nDonations not required!\n\nFUCK Hawk, Jester\n\n", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
+			ShowMessageBoxEx(NULL,NULL,L"About", L"Snes360 V0.40 Beta\n\nOriginal by Anonymous\n07-16-2010 11:59pm\n\nEnhanced by frankischilling\n2025\n\nGreets to r0wdy, Arak0n, kl0wn, idc, direw0lf, PeteNub, MomDad, Odb718, Angerwound, Redline99, TJ_CRS, Xenon7, Xantium, _skitzo_\n\nDonations not required!\n\nFUCK Hawk, Jester\n\n", 1, (LPCWSTR*)&button_text,NULL,  XUI_MB_CENTER_ON_PARENT, NULL);
 			
 
 		}
@@ -560,7 +560,7 @@ public:
 		//GetChildById( L"XuiLogo", &m_Logo );
 		 
 		// Set version text dynamically
-		m_VersionText.SetText(L"Version 0.39 Beta");
+		m_VersionText.SetText(L"Version 0.40 Beta");
 	 
 		SetEffectValue( 20 );
 
@@ -725,10 +725,12 @@ VOID __cdecl main()
 	// Try to load settings.xml, create default if it doesn't exist
 	if (!romPaths.Load("GAME:\\settings.xml"))
 	{
-		// Create default settings.xml file
-		romPaths.CreateDefaultSettings("GAME:\\settings.xml");
-		// Load the newly created file
-		romPaths.Load("GAME:\\settings.xml");
+		DWORD attributes = GetFileAttributes("GAME:\\settings.xml");
+		DWORD error = GetLastError();
+		if (attributes == static_cast<DWORD>(-1) &&
+		    (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) &&
+		    romPaths.CreateDefaultSettings("GAME:\\settings.xml"))
+			romPaths.Load("GAME:\\settings.xml");
 	}
 
 	if (GetFileAttributes(romPaths.m_PreviewPath.c_str()) == -1)

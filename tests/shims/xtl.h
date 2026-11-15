@@ -8,13 +8,13 @@
 #include <strings.h>
 #define _stricmp strcasecmp
 #endif
-typedef unsigned long DWORD;
+typedef unsigned int DWORD;
 typedef int BOOL;
 typedef int HRESULT;
 typedef void* HANDLE;
 typedef wchar_t WCHAR;
 typedef const WCHAR* LPCWSTR;
-struct XOVERLAPPED { HANDLE hEvent; };
+struct XOVERLAPPED { HANDLE hEvent; DWORD dwExtendedError; };
 #define TRUE 1
 #define FALSE 0
 #define S_OK 0
@@ -27,6 +27,8 @@ struct XOVERLAPPED { HANDLE hEvent; };
 #define ERROR_IO_INCOMPLETE 996
 #define ERROR_CANCELLED 1223
 #define ERROR_OPERATION_ABORTED 995
+#define ERROR_FUNCTION_FAILED 1627
+#define ERROR_INVALID_PARAMETER 87
 #define WAIT_OBJECT_0 0
 #define MAX_PATH 260
 #define CP_ACP 0
@@ -40,6 +42,21 @@ struct XOVERLAPPED { HANDLE hEvent; };
 #define MOVEFILE_WRITE_THROUGH 8
 #define FILE_ATTRIBUTE_NORMAL 0
 #define ERROR_FILE_NOT_FOUND 2
+#define ERROR_PATH_NOT_FOUND 3
+#define INVALID_FILE_SIZE 0xffffffffU
+#define FILE_SHARE_READ 1
+#define XCONTENTTYPE_SAVEDGAME 1
+#define XCONTENTFLAG_OPENEXISTING 3
+#define XCONTENTFLAG_CREATEALWAYS 2
+typedef DWORD XCONTENTDEVICEID;
+struct XCONTENT_DATA {
+    XCONTENTDEVICEID DeviceID;
+    DWORD dwContentType;
+    char szFileName[42];
+    WCHAR szDisplayName[128];
+};
+DWORD XContentCreate(DWORD, const char*, const XCONTENT_DATA*, DWORD, DWORD*, void*, XOVERLAPPED*);
+DWORD XContentClose(const char*, XOVERLAPPED*);
 HANDLE CreateFile(const char*, DWORD, DWORD, void*, DWORD, DWORD, HANDLE);
 DWORD GetFileSize(HANDLE, DWORD*);
 BOOL ReadFile(HANDLE, void*, DWORD, DWORD*, void*);
@@ -52,6 +69,7 @@ BOOL FlushFileBuffers(HANDLE);
 BOOL MoveFileEx(const char*, const char*, DWORD);
 DWORD XCancelOverlapped(XOVERLAPPED*);
 DWORD XGetOverlappedResult(XOVERLAPPED*, DWORD*, BOOL);
+DWORD XGetOverlappedExtendedError(XOVERLAPPED*);
 DWORD WaitForSingleObject(HANDLE, DWORD);
 DWORD XShowKeyboardUI(DWORD, DWORD, LPCWSTR, LPCWSTR, LPCWSTR, WCHAR*, DWORD, XOVERLAPPED*);
 inline int WideCharToMultiByte(DWORD, DWORD, const WCHAR* source, int, char* dest, int capacity, void*, void*)

@@ -603,18 +603,9 @@ void S9xSRTCPreSaveState ()
 	Memory.SRAM [s + 3 + MAX_RTC_INDEX] = rtc.index;
 	Memory.SRAM [s + 4 + MAX_RTC_INDEX] = rtc.mode;
 
-#ifdef LSB_FIRST
-	memmove (&Memory.SRAM [s + 5 + MAX_RTC_INDEX], &rtc.system_timestamp, 8);
-#else
-	Memory.SRAM [s + 5  + MAX_RTC_INDEX] = (uint8) (rtc.system_timestamp >>  0);
-	Memory.SRAM [s + 6  + MAX_RTC_INDEX] = (uint8) (rtc.system_timestamp >>  8);
-	Memory.SRAM [s + 7  + MAX_RTC_INDEX] = (uint8) (rtc.system_timestamp >> 16);
-	Memory.SRAM [s + 8  + MAX_RTC_INDEX] = (uint8) (rtc.system_timestamp >> 24);
-	Memory.SRAM [s + 9  + MAX_RTC_INDEX] = (uint8) (rtc.system_timestamp >> 32);
-	Memory.SRAM [s + 10 + MAX_RTC_INDEX] = (uint8) (rtc.system_timestamp >> 40);
-	Memory.SRAM [s + 11 + MAX_RTC_INDEX] = (uint8) (rtc.system_timestamp >> 48);
-	Memory.SRAM [s + 12 + MAX_RTC_INDEX] = (uint8) (rtc.system_timestamp >> 56);
-#endif
+	uint64 timestamp = (uint64) rtc.system_timestamp;
+	for (int i = 0; i < 8; ++i)
+	    Memory.SRAM[s + 5 + MAX_RTC_INDEX + i] = (uint8) (timestamp >> (i * 8));
     }
 }
 
@@ -633,18 +624,10 @@ void S9xSRTCPostLoadState ()
 	rtc.index = Memory.SRAM [s + 3 + MAX_RTC_INDEX];
 	rtc.mode = Memory.SRAM [s + 4 + MAX_RTC_INDEX];
 
-#ifdef LSB_FIRST
-	memmove (&rtc.system_timestamp, &Memory.SRAM [s + 5 + MAX_RTC_INDEX], 8);
-#else
-	rtc.system_timestamp |= (Memory.SRAM [s +  5 + MAX_RTC_INDEX] <<  0);
-	rtc.system_timestamp |= (Memory.SRAM [s +  6 + MAX_RTC_INDEX] <<  8);
-	rtc.system_timestamp |= (Memory.SRAM [s +  7 + MAX_RTC_INDEX] << 16);
-	rtc.system_timestamp |= (Memory.SRAM [s +  8 + MAX_RTC_INDEX] << 24);
-	rtc.system_timestamp |= (Memory.SRAM [s +  9 + MAX_RTC_INDEX] << 32);
-	rtc.system_timestamp |= (Memory.SRAM [s + 10 + MAX_RTC_INDEX] << 40);
-	rtc.system_timestamp |= (Memory.SRAM [s + 11 + MAX_RTC_INDEX] << 48);
-	rtc.system_timestamp |= (Memory.SRAM [s + 12 + MAX_RTC_INDEX] << 56);
-#endif
+	uint64 timestamp = 0;
+	for (int i = 0; i < 8; ++i)
+	    timestamp |= (uint64) Memory.SRAM[s + 5 + MAX_RTC_INDEX + i] << (i * 8);
+	rtc.system_timestamp = (time_t) timestamp;
 	S9xUpdateSrtcTime ();
     }
 }
